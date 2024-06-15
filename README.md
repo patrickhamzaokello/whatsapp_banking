@@ -1,5 +1,6 @@
-The user and system flow in plain text
-Certainly! Below is a plain text description of the user and system flow for handling user input and extracting keywords using OpenAI's GPT-3.
+# The user and system flow in plain text
+Certainly! 
+## Below is a plain text description of the user and system flow for handling user input and extracting keywords using OpenAI's GPT-3.
 
 User and System Flow
 1. User Initiates Interaction

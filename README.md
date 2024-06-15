@@ -2,25 +2,30 @@
 Certainly! 
 ## Below is a plain text description of the user and system flow for handling user input and extracting keywords using OpenAI's GPT-3.
 
-User and System Flow
-1. User Initiates Interaction
+### User and System Flow
+### 1. User Initiates Interaction
 User: Sends a message to the chatbot, e.g., "I want to pay my TV subscription."
-2. System Receives and Processes the Message
+
+### 2. System Receives and Processes the Message
 System: Receives the message via a webhook.
 System: Logs the incoming message for debugging purposes.
-3. Session Management
+
+### 3. Session Management
 System: Extracts the user's phone number from the message.
 System: Checks if a session already exists for the user.
 If no session exists, a new session is created.
 If a session exists, the session timeout is reset to 10 minutes.
-4. Extract User Information
+
+### 4. Extract User Information
 System: Extracts the user's name from the message.
 System: Sanitizes the user message to prevent any injection attacks.
 System: Stores the last user message in the session.
-5. Use OpenAI GPT-3 to Understand User Intent
+
+### 5. Use OpenAI GPT-3 to Understand User Intent
 System: Sends the user message to OpenAI's GPT-3 to extract the intent and relevant information.
 System: Receives the response from GPT-3, which includes the extracted intent.
-6. Determine User Intent and Call Appropriate Function
+
+### 6. Determine User Intent and Call Appropriate Function
 System: Checks the extracted intent for keywords:
 If the intent includes "pay" and "tv", the system calls the function to handle TV subscription payments.
 If the intent includes "pay" and "water", the system calls the function to handle water bill payments.
@@ -29,8 +34,9 @@ If the intent includes "pay" and "prn", the system calls the function to handle 
 If the intent is "restart", the system calls the function to restart the conversation flow.
 If the intent is "/services", the system calls the function to show available services.
 If the intent is not recognized, the system calls the function to process the next step in the flow.
-7. Handle Specific Service Flow
-System: Based on the identified service, the system initiates the corresponding flow:
+### 7. Handle Specific Service Flow
+
+## System: Based on the identified service, the system initiates the corresponding flow:
 TV Subscription Flow:
 
 System: Asks the user to enter their TV number.

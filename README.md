@@ -98,5 +98,6 @@ If the intent is not recognized, the system calls the function to process the ne
 
 ## 11. End of Interaction
 * System: Ends the interaction and waits for the next user message.
+
 This flow ensures that the chatbot can handle complex user inputs, extract relevant keywords, and call the appropriate functions to process the user's request. Using OpenAI's GPT-3 enhances the chatbot's ability to understand natural language and provide accurate responses.
 

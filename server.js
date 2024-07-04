@@ -4,11 +4,11 @@ import OpenAI from "openai";
 import fs from "fs";
 import morgan from "morgan";
 
-
 const app = express();
 app.use(express.json());
 
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT, OPENAI_API_KEY } = process.env;
+const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT, OPENAI_API_KEY } =
+  process.env;
 
 let sessions = {};
 const SESSION_TIMEOUT = 5 * 60 * 1000; // 10 minutes in milliseconds
@@ -491,8 +491,7 @@ app.get("/webhook", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send(`<pre>GTbank Whatsapp banking Hook.
-Checkout README.md to start.</pre>`);
+  res.send(`<pre>GTbank Whatsapp API Homepage</pre>`);
 });
 
 app.listen(PORT, () => {

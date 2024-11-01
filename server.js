@@ -1,10 +1,16 @@
 import express from "express";
 import axios from "axios";
+import dotenv from "dotenv"
 import OpenAI from "openai";
 import fs from "fs";
+import cors from 'cors';
 import morgan from "morgan";
 
+dotenv.config();
+
 const app = express();
+app.use(cors());
+app.use(morgan('dev'));
 app.use(express.json());
 
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT, OPENAI_API_KEY } =

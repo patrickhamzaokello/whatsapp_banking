@@ -1,19 +1,36 @@
 import express from "express";
 import axios from "axios";
-import dotenv from "dotenv"
 import OpenAI from "openai";
 import fs from "fs";
-import cors from 'cors';
 import morgan from "morgan";
+import { generatePaymentLink } from './generatePaymentLink.js';
+import winston from 'winston';
+import path from 'path';
 
-dotenv.config();
+// Create a logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: path.join('/app/logs', 'error.log'), level: 'error' }),
+    new winston.transports.File({ filename: path.join('/app/logs', 'combined.log') }),
+  ],
+});
+
+// If we're not in production, log to the console as well
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+}
 
 const app = express();
-app.use(cors());
-app.use(morgan('dev'));
 app.use(express.json());
 
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT, OPENAI_API_KEY } =
+const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT, OPENAI_API_KEY, CUSTOMER_CODE, GTBANK_SECURE_SECRET } =
   process.env;
 
 let sessions = {};
@@ -28,9 +45,8 @@ function sanitizeText(text) {
 }
 
 app.post("/webhook", async (req, res) => {
-  // log incoming messages
-  console.log('Incoming Webhook: ' + JSON.stringify(req.body));
-  // console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
+ 
+  logger.info('Incoming webhook: ' + JSON.stringify(req.body));
 
   // check if the webhook request contains a message
   const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
@@ -126,13 +142,15 @@ async function sendMessage(message, message_back) {
       },
     },
   });
+  // record response to user
+  sessions[message.from].sysResponse = message_back.replace(/\n/g, '');
 }
 
 function logActiveSessions() {
-  console.log("Active sessions:");
+  logger.info("Active sessions:");
   for (const [phoneNumber, session] of Object.entries(sessions)) {
-    console.log(
-      `User Phone Number: ${phoneNumber}, Current Service: ${session.state.currentService}, Last Message: ${session.lastMessage}`
+    logger.info(
+      `User Phone Number: ${phoneNumber}, Current Service: ${session.state.currentService}, User Message: ${session.lastMessage}, Response: ${session.sysResponse}`
     );
   }
 }
@@ -294,9 +312,32 @@ async function validateTvNumber(tvNumber, message, session, userName) {
 async function validatePhoneNumber(phoneNumber, message, session, userName) {
   // Simulate phone number validation
   if (phoneNumber === "9876543210") {
+    
+    // await sendMessage(
+    //   message,
+    //   `✨ Thank you! ${userName}, I have sent a payment prompt to your phone number: Please Authorize Payment to complete the transaction`,
+    //   userName
+    // );
+    
+    const m_service = session.state.currentService;
+    const cleaned_name = replaceSpacesWithHyphens(userName);
+    const cleaned_details = replaceSpacesWithHyphens(`Service Payment for ${m_service}`);
+    const amount = 500;
+    const currency = 'UGX';
+    const customerCode = CUSTOMER_CODE;
+    const orderId = generateOrderId();
+    const payerName = cleaned_name;
+    const transDetails = cleaned_details;
+    const transDate = getCurrentDate();
+    const emailAddress = 'john@gmail.com';
+    const secureSecret = GTBANK_SECURE_SECRET;
+
+    const paymentLink = generatePaymentLink(amount, currency, customerCode, orderId, payerName, transDetails, transDate, emailAddress, secureSecret);
+   
+
     await sendMessage(
       message,
-      `✨ Thank you! ${userName}, I have sent a payment prompt to your phone number: Please Authorize Payment to complete the transaction`,
+      `Thank you! ${userName}, Here is the payment link \n\n ${paymentLink} \n\n click on the link to complete the Payment for ${session.state.currentService}`,
       userName
     );
     session.state.flowNextState = null;
@@ -425,6 +466,25 @@ async function validateEmail(email, message, session, userName) {
   }
 }
 
+function replaceSpacesWithHyphens(input) {
+    return input.replace(/ /g, '-');
+}
+
+function getCurrentDate() {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}-${minutes}-${seconds}Z`;
+}
+
+function generateOrderId() {
+    return Math.random().toString(36).substr(2, 9);
+}
+
 function resetState(session) {
   session.state.currentService = null;
   session.state.flowCompletedStates = [];
@@ -490,16 +550,15 @@ app.get("/webhook", (req, res) => {
   if (mode === "subscribe" && token === WEBHOOK_VERIFY_TOKEN) {
     // respond with 200 OK and challenge token from the request
     res.status(200).send(challenge);
-    console.log("Webhook verified successfully!");
+    logger.info("Webhook verified successfully!");
   } else {
     // respond with '403 Forbidden' if verify tokens do not match
-    console.log("Webhook Verification Failed");
     res.sendStatus(403);
   }
 });
 
 app.get("/", (req, res) => {
-  res.send(`<pre>GTbank Whatsapp API Homepage</pre>`);
+  res.send(`<pre>GTbank Whatsapp API</pre>`);
 });
 
 app.listen(PORT, () => {

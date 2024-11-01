@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  gtbank-whatsapp-api:
+    image: pkasemer/gtbank-whatsapp-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always

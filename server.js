@@ -23,6 +23,7 @@ function sanitizeText(text) {
 
 app.post("/webhook", async (req, res) => {
   // log incoming messages
+  console.log('Incoming Webhook: ' + JSON.stringify(req.body));
   // console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
   // check if the webhook request contains a message
@@ -486,6 +487,7 @@ app.get("/webhook", (req, res) => {
     console.log("Webhook verified successfully!");
   } else {
     // respond with '403 Forbidden' if verify tokens do not match
+    console.log("Webhook Verification Failed");
     res.sendStatus(403);
   }
 });

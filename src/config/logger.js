@@ -1,7 +1,7 @@
 import winston from 'winston';
 import path from 'path';
 
-const LOG_DIR = process.env.LOG_DIR || 'logs';
+const LOG_DIR = process.env.LOG_DIR || path.join(process.cwd(), 'logs');
 
 const logger = winston.createLogger({
   level: 'info',

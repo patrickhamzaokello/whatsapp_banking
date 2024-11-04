@@ -1,4 +1,7 @@
 import winston from 'winston';
+import path from 'path';
+
+const LOG_DIR = process.env.LOG_DIR || 'logs';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -16,12 +19,12 @@ const logger = winston.createLogger({
     }),
     // Write all logs with level 'error' and below to 'error.log'
     new winston.transports.File({ 
-      filename: 'logs/error.log', 
+      filename: path.join(LOG_DIR, 'error.log'), 
       level: 'error' 
     }),
     // Write all logs to 'combined.log'
     new winston.transports.File({ 
-      filename: 'logs/combined.log' 
+      filename: path.join(LOG_DIR, 'combined.log') 
     })
   ]
 });
@@ -30,12 +33,12 @@ const logger = winston.createLogger({
 if (process.env.NODE_ENV === 'production') {
   logger.exceptions.handle(
     new winston.transports.File({ 
-      filename: 'logs/exceptions.log' 
+      filename: path.join(LOG_DIR, 'exceptions.log') 
     })
   );
   logger.rejections.handle(
     new winston.transports.File({ 
-      filename: 'logs/rejections.log' 
+      filename: path.join(LOG_DIR, 'rejections.log') 
     })
   );
 }

@@ -16,5 +16,7 @@ docker images pkasemer/gtbank-whatsapp-api -q | xargs -r docker rmi -f
 # Build the image with no-cache to ensure fresh build
 docker-compose build --no-cache
 
+docker volume create logs
+
 # Run the container in non-detached mode
-docker-compose up -d
+docker-compose up

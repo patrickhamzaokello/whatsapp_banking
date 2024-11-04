@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import logger from '../config/logger.js';
+import {config} from '../config/environment.js';
+import {PaymentError} from '../errors/custom-errors.js';
 
 export class PaymentService {
   static async generatePaymentDetails(service, amount, userName, email) {

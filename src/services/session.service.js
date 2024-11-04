@@ -1,4 +1,5 @@
 import logger from '../config/logger.js';
+import {Session} from '../models/Session.js'
 export class SessionService {
   static sessions = new Map();
 

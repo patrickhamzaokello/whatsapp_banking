@@ -1,4 +1,8 @@
 import logger from '../config/logger.js';
+import axios from 'axios';
+import {config} from '../config/environment.js';
+import {WhatsAppError} from '../errors/custom-errors.js';
+
 export class WhatsAppService {
     static async sendMessage(phoneNumberId, to, message, messageId = null) {
       try {

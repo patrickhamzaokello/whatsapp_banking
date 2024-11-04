@@ -1,4 +1,7 @@
 import logger from '../config/logger.js';
+import {SessionService} from '../services/session.service.js';
+import {WhatsAppService} from '../services/whatsapp.service.js';
+import {PaymentService} from '../services/payment.service.js';
 
 export class MessageHandler {
   static async handleIncoming(message, contact, businessPhoneNumberId) {

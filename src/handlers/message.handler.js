@@ -79,17 +79,21 @@ export class MessageHandler {
    */
   static determineIntent(messageText) {
     const text = messageText.toLowerCase();
+
+    if(!text.includes('pay')){
+      return 'UNKNOWN'
+    }
     
     if (text.includes('tv') || text.includes('television')) {
       return 'PAY_TV';
     }
-    if (text.includes('water') || text.includes('bill water')) {
+    if (text.includes('water') || text.includes('nwsc')) {
       return 'PAY_WATER';
     }
-    if (text.includes('electricity') || text.includes('power') || text.includes('bill light')) {
+    if (text.includes('electricity') || text.includes('power') || text.includes('yaka')) {
       return 'PAY_ELECTRICITY';
     }
-    if (text.includes('prn') || text.includes('payment reference')) {
+    if (text.includes('prn') || text.includes('ura')) {
       return 'PAY_PRN';
     }
     if (text.includes('yes') || text.includes('confirm') || text.includes('proceed')) {

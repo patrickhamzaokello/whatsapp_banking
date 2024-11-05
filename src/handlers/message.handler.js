@@ -43,6 +43,9 @@ export class MessageHandler {
         case 'PRCESSFLOWSTEPS':
           await this.processFlowStep(message, session, businessPhoneNumberId);
           break;
+        case 'USERINFOMESSAGE':
+          await this.showAssistantInfo(message, session, businessPhoneNumberId);
+          break;
         default:
           session.resetState();
           await this.showServices(message, session, businessPhoneNumberId);
@@ -442,8 +445,9 @@ export class MessageHandler {
       if (text.includes('yes') || text.includes('confirm') || text.includes('proceed')) {
         return 'CONFIRM';
       }
-
       return 'UNKNOWN';
+    } else if (text.includes('contact') || text.includes('faq') || text.includes('about')) {
+      return 'USERINFOMESSAGE'
     } else if (text.includes('services') || text.includes('menu') || text.includes('home')) {
       return 'MAINMENU'
     } else {
@@ -495,20 +499,91 @@ export class MessageHandler {
    * @param {Object} session - The user's session
    * @param {string} businessPhoneNumberId - The business phone number ID
    */
-  static async showServices( message, session, businessPhoneNumberId) {
-    const servicesMessage = 
-    `Hello ${session.userName}, welcome to our payment service. Please choose a service to pay for using mobile money:\n\n` +
-    `1. TV Subscription (GOTV & DSTV)\n` +
-    `2. Water Bill (NWSC)\n` +
-    `3. Electricity Bill (UMEME/YAKA)\n` +
-    `4. URA Reference Number (PRN)\n\n` +
-    `To proceed, reply with  "Pay TV," "Pay Water," "Pay Electricity," or "Pay PRN."\n\n` +
-    `Thank you for choosing our service.`;   
+  static async showServices(message, session, businessPhoneNumberId) {
+    const servicesMessage =
+      `Hello ${session.userName}, welcome to our payment service. Please choose a service to pay for using mobile money:\n\n` +
+      `1. TV Subscription (GOTV & DSTV)\n` +
+      `2. Water Bill (NWSC)\n` +
+      `3. Electricity Bill (UMEME/YAKA)\n` +
+      `4. URA Reference Number (PRN)\n\n` +
+      `To proceed, reply with  "Pay TV," "Pay Water," "Pay Electricity," or "Pay PRN."\n\n` +
+      `Thank you for choosing our service.\n\n\n` +
+      `1. Contact\n` +
+      `2. FAQ\n` +
+      `3. About\n`;;
 
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
       servicesMessage,
+      message.id
+    );
+  }
+
+  static async showAssistantInfo(message, session, businessPhoneNumberId) {
+    const infoMessage =
+      `Hello! ${session.userName} 👋 Welcome to the GTbank Online Assistant.\n\n` +
+      `I am here to assist you with your banking needs, provide information about our services, and help you with transactions directly through WhatsApp.\n\n` +
+      `For the best experience, please ensure you are using the official WhatsApp app, available on the Google Play Store or Apple App Store.\n\n` +
+      `To get started, reply with:\n` +
+      `1. To contact us directly\n` +
+      `2. To read our Frequently Asked Questions (FAQ)\n\n` +
+      `Thank you for choosing GTbank!`;
+
+    const contactMessage =
+      `For assistance, you can reach us through the following channels:\n\n` +
+      `📞 **Phone Numbers:**\n` +
+      `- Customer Service: +123-456-7890\n` +
+      `- Support: +123-456-7891\n\n` +
+      `🌐 **Website:** [www.gtbank.com](http://www.gtbank.com)\n\n` +
+      `📍 **Location Address:**\n` +
+      `GTbank Head Office, \n` +
+      `123 Banking St, \n` +
+      `City, Country\n\n` +
+      `✉️ **Email:** support@gtbank.com\n\n` +
+      `We are here to help you with any inquiries you may have!`;
+
+
+    const faqMessage =
+      `Frequently Asked Questions (FAQ) about Services:\n\n` +
+      `**1. What services can I pay for using the GTbank Online Assistant?**\n` +
+      `You can pay for the following services directly through the assistant:\n` +
+      `- TV Subscription (GOTV & DSTV)\n` +
+      `- Water Bill (NWSC)\n` +
+      `- Electricity Bill (UMEME/YAKA)\n` +
+      `- URA Reference Number (PRN)\n\n` +
+      `**2. How do I make a payment?**\n` +
+      `Simply reply with the number corresponding to the service you wish to pay for, or type the service name (e.g., "Pay TV").\n\n` +
+      `**3. Can I use mobile money for payments?**\n` +
+      `Yes, all payments are processed through mobile money for your convenience.\n\n` +
+      `**4. What if I need further assistance?**\n` +
+      `If you need help beyond these services, you can reply with "Contact us" for direct support or check our website for more information.\n\n` +
+      `**5. Is my payment information secure?**\n` +
+      `Absolutely! We take your security seriously and use secure payment processes to protect your information.\n\n` +
+      `If you have any other questions, feel free to ask!`;
+
+    let responseMessage;
+
+    const message_text = message.text.body.toLowerCase()
+
+    switch (message_text) {
+      case 'contact':
+        responseMessage = contactMessage;
+        break;
+
+      case 'faq':
+        responseMessage = faqMessage;
+        break;
+
+      default:
+        responseMessage = infoMessage;
+        break;
+    }
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      responseMessage,
       message.id
     );
   }

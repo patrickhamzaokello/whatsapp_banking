@@ -1,3 +1,6 @@
+import {SessionService} from '../services/session.service.js';
+import {config} from '../config/environment.js';
+
 export class Session {
   constructor(phoneNumber, userName) {
     this.phoneNumber = phoneNumber;

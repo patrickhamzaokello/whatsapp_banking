@@ -21,7 +21,7 @@ export class MessageHandler {
       await this.processIntent(intent, message, session, businessPhoneNumberId);
       
     } catch (error) {
-      logger.error('Error handling incoming message', { error, message });
+      logger.error('Error handling incoming message', {  error, message });
       throw error;
     }
   }

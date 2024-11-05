@@ -82,7 +82,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `To pay for your TV subscription? 📺\n𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝘆𝗼𝘂𝗿 𝗧𝗩 𝗻𝘂𝗺𝗯𝗲𝗿.`
+      `To pay for your TV subscription? 📺\n𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝘆𝗼𝘂𝗿 𝗧𝗩 𝗻𝘂𝗺𝗯𝗲𝗿.`,
+      message.id
     );
     session.state.flowNextState = "validateTvNumber";
   }
@@ -92,7 +93,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Great! Now, please enter your mobile money phone number to proceed.`
+      `Great! Now, please enter your mobile money phone number to proceed.`,      
+      message.id
     );
     session.state.flowNextState = "validatePhoneNumber";
   }
@@ -101,7 +103,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Please enter your meter number.`
+      `Please enter your meter number.`,
+      message.id
     );
     session.state.flowNextState = "validateMeterNumber";
   }
@@ -110,7 +113,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Please enter your Water account number.`
+      `Please enter your Water account number.`,
+      message.id
     );
     session.state.flowNextState = "validateWaterNumber";
   }
@@ -119,7 +123,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Please enter your email address.`
+      `Please enter your email address.`,
+      message.id
     );
     session.state.flowNextState = "validateEmail";
   }
@@ -128,7 +133,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `✨ Hi ${username}! To get started with your payment, \n\nCould you please enter your 𝗣𝗥𝗡 (Payment Reference Number)?`
+      `✨ Hi ${username}! To get started with your payment, \n\nCould you please enter your 𝗣𝗥𝗡 (Payment Reference Number)?`,
+      message.id
     );
     session.state.flowNextState = "validatePrn";
   }
@@ -138,7 +144,8 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `✨ I have found your PRN Details is ${prn}. \n\nPlease send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed.`
+        `✨ I have found your PRN Details is ${prn}. \n\nPlease send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed.`,
+        message.id
       );
       session.state.flowNextState = "requestPhoneNumber";
       session.attempts.prn = 0; // Reset attempts after successful validation
@@ -150,7 +157,8 @@ export class MessageHandler {
           businessPhoneNumberId,
           message.from,
           `Invalid PRN. You have ${3 - session.attempts.prn
-          } attempts left. Please try again.`
+          } attempts left. Please try again.`,
+          message.id
         );
       } else {
 
@@ -171,7 +179,8 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your TV number is ${tvNumber}. Please send 'confirm' to proceed.`
+        `Your TV number is ${tvNumber}. Please send 'confirm' to proceed.`,
+        message.id
       );
       session.state.flowNextState = "requestPhoneNumber";
       session.attempts.tvNumber = 0; // Reset attempts after successful validation
@@ -183,6 +192,7 @@ export class MessageHandler {
           message.from,
           `Invalid TV number. You have ${3 - session.attempts.tvNumber
           } attempts left. Please try again.`,
+          message.id
         );
       } else {
         await WhatsAppService.sendMessage(
@@ -238,7 +248,8 @@ export class MessageHandler {
           businessPhoneNumberId,
           message.from,
           `Invalid phone number. You have ${3 - session.attempts.phoneNumber
-          } attempts left. Please try again.`
+          } attempts left. Please try again.`,
+          message.id
         );
       } else {
         await WhatsAppService.sendMessage(
@@ -259,7 +270,8 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your Water account number is ${waterNumber}. Please send 'confirm' to proceed.`
+        `Your Water account number is ${waterNumber}. Please send 'confirm' to proceed.`,
+        message.id
       );
       session.state.flowNextState = "requestEmail";
       session.attempts.waterNumber = 0; // Reset attempts after successful validation
@@ -270,7 +282,8 @@ export class MessageHandler {
           businessPhoneNumberId,
           message.from,
           `Invalid Water account number. You have ${3 - session.attempts.waterNumber
-          } attempts left. Please try again.`
+          } attempts left. Please try again.`,
+          message.id
         );
       } else {
         await WhatsAppService.sendMessage(
@@ -292,7 +305,8 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your meter number is ${meterNumber}. Please type 'confirm' to proceed.`
+        `Your meter number is ${meterNumber}. Please type 'confirm' to proceed.`,
+        message.id
       );
       session.state.flowNextState = "requestPhoneNumber";
       session.attempts.meterNumber = 0; // Reset attempts after successful validation
@@ -303,7 +317,8 @@ export class MessageHandler {
           businessPhoneNumberId,
           message.from,
           `Invalid meter number. You have ${3 - session.attempts.meterNumber
-          } attempts left. Please try again.`
+          } attempts left. Please try again.`,
+          message.id
         );
       } else {
         await WhatsAppService.sendMessage(
@@ -325,7 +340,8 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Here is your payment link: [Payment Link]`
+        `Here is your payment link: [Payment Link]`,
+        message.id
       );
       session.state.flowNextState = null;
       session.state.overallProgress = 100;
@@ -338,7 +354,8 @@ export class MessageHandler {
           businessPhoneNumberId,
           message.from,
           `Invalid email address. You have ${3 - session.attempts.email
-          } attempts left. Please try again.`
+          } attempts left. Please try again.`,
+          message.id
         );
       } else {
         await WhatsAppService.sendMessage(
@@ -359,7 +376,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Hey ${userName}! 🤭 I can help you pay for these services using mobile money:\n\n \u2022 URA (PRN) 🔢\n \u2022 National Water (NWSC) 💦\n \u2022 Electricity (UMEME/YAKA) ⚡\n \u2022 TV (GOTV & DSTV) 📺\n\n𝗥𝗲𝗽𝗹𝘆 𝘄𝗶𝘁𝗵 𝗣𝗮𝘆 𝗣𝗥𝗡 , 𝗼𝗿 𝗣𝗮𝘆 𝗨𝗠𝗘𝗠𝗘 , 𝗼𝗿 𝗣𝗮𝘆 𝗪𝗮𝘁𝗲𝗿 , 𝗼𝗿 𝗣𝗮𝘆 𝗧𝘃. \n\nLet's make things easy for you! 😎`
+      `Hey ${userName}! 🤭 I can help you pay for these services using mobile money:\n\n \u2022 URA (PRN) 🔢\n \u2022 National Water (NWSC) 💦\n \u2022 Electricity (UMEME/YAKA) ⚡\n \u2022 TV (GOTV & DSTV) 📺\n\n𝗥𝗲𝗽𝗹𝘆 𝘄𝗶𝘁𝗵 𝗣𝗮𝘆 𝗣𝗥𝗡 , 𝗼𝗿 𝗣𝗮𝘆 𝗨𝗠𝗘𝗠𝗘 , 𝗼𝗿 𝗣𝗮𝘆 𝗪𝗮𝘁𝗲𝗿 , 𝗼𝗿 𝗣𝗮𝘆 𝗧𝘃. \n\nLet's make things easy for you! 😎`,
+      message.id
     );
 
   }
@@ -451,7 +469,8 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      servicesMessage
+      servicesMessage,
+      message.id
     );
   }
 }

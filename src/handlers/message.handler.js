@@ -36,7 +36,7 @@ export class MessageHandler {
         case 'PAY_WATER':
         case 'PAY_ELECTRICITY':
         case 'PAY_PRN':
-          await this.startServiceFlow(intent, message, session, businessPhoneNumberId);
+          await this.startServiceFlow(intent, message, session,businessPhoneNumberId);
           break;
         case 'CONFIRM':
           await this.handleConfirmation(message, session, businessPhoneNumberId);
@@ -50,9 +50,10 @@ export class MessageHandler {
     }
   }
 
-  static startServiceFlow(intent, message, session, userName, businessPhoneNumberId) {
+  static startServiceFlow(intent, message, session, businessPhoneNumberId) {
     const service = intent.split('_')[1].toLowerCase();
     session.state.currentService = service;
+    const userName = session.userName;
     session.state.flowCompletedStates = [];
     session.state.flowNextState = service === "tv"
       ? "requestTvNumber"

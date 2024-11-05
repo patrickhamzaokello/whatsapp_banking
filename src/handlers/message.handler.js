@@ -27,8 +27,6 @@ export class MessageHandler {
     }
   }
 
-
-
   static async processIntent(intent, message, session, businessPhoneNumberId) {
     try {
       switch (intent) {

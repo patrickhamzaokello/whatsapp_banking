@@ -15,8 +15,6 @@ export class MessageHandler {
         SessionService.createSession(userPhone, userName);
 
       session.resetTimeout();
-
-      // // Mark message as read
       await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message.id);
       const intent = this.determineIntent(message.text.body);
       await this.processIntent(intent, message, session, businessPhoneNumberId);
@@ -34,17 +32,67 @@ export class MessageHandler {
         case 'PAY_WATER':
         case 'PAY_ELECTRICITY':
         case 'PAY_PRN':
-          await this.startServiceFlow(intent, message, session,businessPhoneNumberId);
+          await this.startServiceFlow(intent, message, session, businessPhoneNumberId);
           break;
         case 'CONFIRM':
           await this.handleConfirmation(message, session, businessPhoneNumberId);
           break;
+        case 'MAINMENU':
+          await this.showServices(message, session, businessPhoneNumberId);
+          break;
+        case 'PRCESSFLOWSTEPS':
+          await this.processFlowStep(message, session, businessPhoneNumberId);
+          break;
         default:
+          session.resetState();
           await this.showServices(message, session, businessPhoneNumberId);
       }
     } catch (error) {
       logger.error('Error processing intent', { error, intent });
       throw error;
+    }
+  }
+
+  static async processFlowStep(message, session, businessPhoneNumberId) {
+    const text = message.text.body;
+    const userName = session.userName;
+
+    if (session.state.flowNextState === "validateTvNumber") {
+      await this.validateTvNumber(text, message, session, userName, businessPhoneNumberId);
+    } else if (session.state.flowNextState === "requestPhoneNumber") {
+      if (text.toLowerCase() === "confirm") {
+        await this.requestPhoneNumber(message, session, userName, businessPhoneNumberId);
+      } else {
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          `Please send 'confirm' to proceed.`,
+          message.id
+        );
+      }
+    } else if (session.state.flowNextState === "validatePhoneNumber") {
+      await this.validatePhoneNumber(text, message, session, userName, businessPhoneNumberId);
+    } else if (session.state.flowNextState === "validateWaterNumber") {
+      await this.validateWaterNumber(text, message, session, userName, businessPhoneNumberId);
+    } else if (session.state.flowNextState === "requestEmail") {
+      if (text.toLowerCase() === "confirm") {
+        await this.requestEmail(message, session, userName, businessPhoneNumberId);
+      } else {
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          `Please send 'confirm' to proceed.`,
+          message.id
+        );
+      }
+    } else if (session.state.flowNextState === "validateEmail") {
+      await this.validateEmail(text, message, session, userName, businessPhoneNumberId);
+    } else if (session.state.flowNextState === "validateMeterNumber") {
+      await this.validateMeterNumber(text, message, session, userName, businessPhoneNumberId);
+    } else if (session.state.flowNextState === "validatePrn") {
+      await this.validatePrn(text, message, session, userName, businessPhoneNumberId);
+    } else {
+      await this.showServices(message, session, businessPhoneNumberId);
     }
   }
 
@@ -72,7 +120,7 @@ export class MessageHandler {
     } else if (service === "prn") {
       this.requestPrn(message, session, userName, businessPhoneNumberId);
     } else {
-      this.showServices(message, session, userName, businessPhoneNumberId);
+      this.showServices(message, session, businessPhoneNumberId);
     }
 
   }
@@ -92,7 +140,7 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Great! Now, please enter your mobile money phone number to proceed.`,      
+      `Great! Now, please enter your mobile money phone number to proceed.`,
       message.id
     );
     session.state.flowNextState = "validatePhoneNumber";
@@ -168,7 +216,7 @@ export class MessageHandler {
         );
         session.attempts.prn = 0; // Reset attempts after exceeding the limit
         session.resetState()
-        this.showServices(message, session, userName, businessPhoneNumberId); // Show the list of services
+        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
       }
     }
   }
@@ -201,7 +249,7 @@ export class MessageHandler {
         );
         session.attempts.tvNumber = 0; // Reset attempts after exceeding the limit
         session.resetState();
-        this.showServices(message, session, userName, businessPhoneNumberId); // Show the list of services
+        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
       }
     }
   }
@@ -258,7 +306,7 @@ export class MessageHandler {
         );
         session.attempts.phoneNumber = 0; // Reset attempts after exceeding the limit
         session.resetState();
-        this.showServices(message, session, userName, businessPhoneNumberId); // Show the list of services
+        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
       }
     }
 
@@ -292,7 +340,7 @@ export class MessageHandler {
         );
         session.attempts.waterNumber = 0; // Reset attempts after exceeding the limit
         session.resetState();
-        this.showServices(message, session, userName, businessPhoneNumberId); // Show the list of services
+        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
       }
     }
 
@@ -327,7 +375,7 @@ export class MessageHandler {
         );
         session.attempts.meterNumber = 0; // Reset attempts after exceeding the limit
         session.resetState();
-        this.showServices(message, session, userName, businessPhoneNumberId); // Show the list of services
+        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
       }
     }
 
@@ -364,20 +412,9 @@ export class MessageHandler {
         );
         session.attempts.email = 0; // Reset attempts after exceeding the limit
         session.resetState();
-        this.showServices(message, session, userName, businessPhoneNumberId);// Show the list of services
+        this.showServices(message, session, businessPhoneNumberId);// Show the list of services
       }
     }
-
-  }
-
-  static async showServices(message, session, userName, businessPhoneNumberId) {
-    session.resetState()
-    await WhatsAppService.sendMessage(
-      businessPhoneNumberId,
-      message.from,
-      `Hey ${userName}! 🤭 I can help you pay for these services using mobile money:\n\n \u2022 URA (PRN) 🔢\n \u2022 National Water (NWSC) 💦\n \u2022 Electricity (UMEME/YAKA) ⚡\n \u2022 TV (GOTV & DSTV) 📺\n\n𝗥𝗲𝗽𝗹𝘆 𝘄𝗶𝘁𝗵 𝗣𝗮𝘆 𝗣𝗥𝗡 , 𝗼𝗿 𝗣𝗮𝘆 𝗨𝗠𝗘𝗠𝗘 , 𝗼𝗿 𝗣𝗮𝘆 𝗪𝗮𝘁𝗲𝗿 , 𝗼𝗿 𝗣𝗮𝘆 𝗧𝘃. \n\nLet's make things easy for you! 😎`,
-      message.id
-    );
 
   }
 
@@ -405,10 +442,12 @@ export class MessageHandler {
       if (text.includes('yes') || text.includes('confirm') || text.includes('proceed')) {
         return 'CONFIRM';
       }
-      return 'UNKNOWN';
 
+      return 'UNKNOWN';
+    } else if (text.includes('services') || text.includes('menu') || text.includes('home')) {
+      return 'MAINMENU'
     } else {
-      return 'UNKNOWN'
+      return 'PRCESSFLOWSTEPS'
     }
 
 
@@ -456,14 +495,15 @@ export class MessageHandler {
    * @param {Object} session - The user's session
    * @param {string} businessPhoneNumberId - The business phone number ID
    */
-  static async showServices(message, session, businessPhoneNumberId) {
-    const servicesMessage =
-      "Welcome! 👋 Please choose a service to pay for:\n\n" +
-      "1. TV Subscription 📺\n" +
-      "2. Water Bill 💧\n" +
-      "3. Electricity Bill ⚡\n" +
-      "4. Pay with Reference Number (PRN) 🔢\n\n" +
-      "Reply with the service you'd like to pay for.";
+  static async showServices( message, session, businessPhoneNumberId) {
+    const servicesMessage = 
+    `Hello ${session.userName}, welcome to our payment service. Please choose a service to pay for using mobile money:\n\n` +
+    `1. TV Subscription (GOTV & DSTV)\n` +
+    `2. Water Bill (NWSC)\n` +
+    `3. Electricity Bill (UMEME/YAKA)\n` +
+    `4. URA Reference Number (PRN)\n\n` +
+    `To proceed, reply with  "Pay TV," "Pay Water," "Pay Electricity," or "Pay PRN."\n\n` +
+    `Thank you for choosing our service.`;   
 
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,

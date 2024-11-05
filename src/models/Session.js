@@ -1,5 +1,5 @@
-import {SessionService} from '../services/session.service.js';
-import {config} from '../config/environment.js';
+import { SessionService } from '../services/session.service.js';
+import { config } from '../config/environment.js';
 
 export class Session {
   constructor(phoneNumber, userName) {
@@ -36,5 +36,12 @@ export class Session {
 
   setPaymentDetails(details) {
     this.state.paymentDetails = details;
+  }
+
+  resetState() {
+    this.state.currentService = null;
+    this.state.flowCompletedStates = [];
+    this.state.flowNextState = null;
+    this.state.overallProgress = 0;
   }
 }

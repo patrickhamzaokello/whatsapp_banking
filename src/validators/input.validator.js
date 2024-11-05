@@ -14,4 +14,8 @@ export class InputValidator {
         error: emailRegex.test(email) ? null : 'Invalid email format'
       };
     }
+
+    static replaceSpacesWithHyphens(input){
+      return input.replace(/ /g, "-");
+    }
   }

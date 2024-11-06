@@ -10,7 +10,9 @@ export class Session {
       flowCompletedStates: [],
       flowNextState: null,
       overallProgress: 0,
-      paymentDetails: null
+      paymentDetails: null,
+      paymentMethod: null,
+      userEmail: null
     };
     this.attempts = {
       tvNumber: 0,

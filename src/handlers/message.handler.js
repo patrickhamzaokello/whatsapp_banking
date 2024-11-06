@@ -56,46 +56,114 @@ export class MessageHandler {
     }
   }
 
+
+
   static async processFlowStep(message, session, businessPhoneNumberId) {
     const text = message.text.body;
     const userName = session.userName;
+    const flowNextState = session.state.flowNextState;
 
-    if (session.state.flowNextState === "validateTvNumber") {
-      await this.validateTvNumber(text, message, session, userName, businessPhoneNumberId);
-    } else if (session.state.flowNextState === "requestPhoneNumber") {
-      if (text.toLowerCase() === "confirm") {
-        await this.requestPhoneNumber(message, session, userName, businessPhoneNumberId);
-      } else {
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `Please send 'confirm' to proceed.`,
-          message.id
+    switch (flowNextState) {
+      case "validateTvNumber":
+        await this.validateTvNumber(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
         );
-      }
-    } else if (session.state.flowNextState === "validatePhoneNumber") {
-      await this.validatePhoneNumber(text, message, session, userName, businessPhoneNumberId);
-    } else if (session.state.flowNextState === "validateWaterNumber") {
-      await this.validateWaterNumber(text, message, session, userName, businessPhoneNumberId);
-    } else if (session.state.flowNextState === "requestEmail") {
-      if (text.toLowerCase() === "confirm") {
-        await this.requestEmail(message, session, userName, businessPhoneNumberId);
-      } else {
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `Please send 'confirm' to proceed.`,
-          message.id
+        break;
+
+      case "requestPhoneNumber":
+        await this.requestPhoneNumber(
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
         );
-      }
-    } else if (session.state.flowNextState === "validateEmail") {
-      await this.validateEmail(text, message, session, userName, businessPhoneNumberId);
-    } else if (session.state.flowNextState === "validateMeterNumber") {
-      await this.validateMeterNumber(text, message, session, userName, businessPhoneNumberId);
-    } else if (session.state.flowNextState === "validatePrn") {
-      await this.validatePrn(text, message, session, userName, businessPhoneNumberId);
-    } else {
-      await this.showServices(message, session, businessPhoneNumberId);
+        break;
+
+      case "validatePhoneNumber":
+        await this.validatePhoneNumber(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+
+      case "validateWaterNumber":
+        await this.validateWaterNumber(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+
+      case "requestEmail":
+        await this.requestEmail(
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+
+      case "validateEmail":
+        await this.validateEmail(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+
+      case "validateMeterNumber":
+        await this.validateMeterNumber(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+
+      case "validatePrn":
+        await this.validatePrn(
+          text,
+          message,
+          session,
+          userName,
+          businessPhoneNumberId
+        );
+        break;
+      case "requestPaymentMethod":
+        if (text.toLowerCase() === "confirm") {
+          await this.requestPaymentMethod(message, session, userName, businessPhoneNumberId);
+        } else {
+          await WhatsAppService.sendMessage(
+            businessPhoneNumberId,
+            message.from,
+            `Please send 'confirm' to proceed.`,
+            message.id
+          );
+        }
+        break;
+      case "validatePaymentMethod":
+        await this.validatePaymentMethod(text, message, session, businessPhoneNumberId);
+        break;
+
+      default:
+        await this.showServices(
+          message,
+          session,
+          businessPhoneNumberId
+        );
+        break;
     }
   }
 
@@ -104,28 +172,75 @@ export class MessageHandler {
     session.state.currentService = service;
     const userName = session.userName;
     session.state.flowCompletedStates = [];
-    session.state.flowNextState = service === "tv"
-      ? "requestTvNumber"
-      : service === "water"
-        ? "requestWaterNumber"
-        : service === "umeme"
-          ? "requestMeterNumber"
-          : "requestPrn";
 
-    session.state.overallProgress = 0;
+    const nextStateMap = {
+      tv: "requestTvNumber",
+      water: "requestWaterNumber",
+      umeme: "requestMeterNumber",
+      prn: "requestPrn",
+    };
 
-    if (service === "tv") {
-      this.requestTvNumber(message, session, userName, businessPhoneNumberId);
-    } else if (service === "water") {
-      this.requestWaterNumber(message, session, userName, businessPhoneNumberId);
-    } else if (service === "umeme") {
-      this.requestMeterNumber(message, session, userName, businessPhoneNumberId);
-    } else if (service === "prn") {
-      this.requestPrn(message, session, userName, businessPhoneNumberId);
-    } else {
-      this.showServices(message, session, businessPhoneNumberId);
+    session.state.flowNextState = nextStateMap[service] || null;
+
+    switch (service) {
+      case "tv":
+        this.requestTvNumber(message, session, userName, businessPhoneNumberId);
+        break;
+      case "water":
+        this.requestWaterNumber(message, session, userName, businessPhoneNumberId);
+        break;
+      case "umeme":
+        this.requestMeterNumber(message, session, userName, businessPhoneNumberId);
+        break;
+      case "prn":
+        this.requestPrn(message, session, userName, businessPhoneNumberId);
+        break;
+      default:
+        this.showServices(message, session, businessPhoneNumberId);
     }
+  }
 
+  static async requestPaymentMethod(message, session, userName, businessPhoneNumberId) {
+    // Prompt user to choose between card or mobile payment
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      `Please choose your payment method:\nType "Card" for card payments 💳\nType "Mobile" for mobile payments 📱`,
+      message.id
+    );
+    session.state.flowNextState = "validatePaymentMethod"; // Set the next state
+  }
+
+  static async validatePaymentMethod(text, message, session, businessPhoneNumberId) {
+    const choice = text.toLowerCase();
+    if (choice === "card" || choice === "mobile") {
+      // Store user’s payment method choice
+      session.state.paymentMethod = choice;
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        `You selected ${choice === "card" ? "Card" : "Mobile"} payment. Proceeding...`,
+        message.id
+      );
+      session.state.flowNextState = "finalizePayment"; // Move to the final payment step
+      await this.finalizePayment(message, session, businessPhoneNumberId);
+    } else {
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        `Invalid choice. Please type "Card" or "Mobile" to choose your payment method.`,
+        message.id
+      );
+    }
+  }
+
+  static async finalizePayment(message, session, businessPhoneNumberId) {
+    const paymentMethod = session.state.paymentMethod;
+    if (paymentMethod === "card") {
+      await this.requestEmail(message, session, session.userName, businessPhoneNumberId);
+    } else if (paymentMethod === "mobile") {
+      await this.requestPhoneNumber(message, session, session.userName, businessPhoneNumberId);
+    }
   }
 
   static async requestTvNumber(message, session, username, businessPhoneNumberId) {
@@ -143,7 +258,7 @@ export class MessageHandler {
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
       message.from,
-      `Great! Now, please enter your mobile money phone number to proceed.`,
+      `${username}, please enter the phone number that will be used to make the payment.`,
       message.id
     );
     session.state.flowNextState = "validatePhoneNumber";
@@ -197,7 +312,7 @@ export class MessageHandler {
         `✨ I have found your PRN Details is ${prn}. \n\nPlease send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed.`,
         message.id
       );
-      session.state.flowNextState = "requestPhoneNumber";
+      session.state.flowNextState = "requestPaymentMethod";
       session.attempts.prn = 0; // Reset attempts after successful validation
     } else {
       session.attempts.prn++;
@@ -232,7 +347,7 @@ export class MessageHandler {
         `Your TV number is ${tvNumber}. Please send 'confirm' to proceed.`,
         message.id
       );
-      session.state.flowNextState = "requestPhoneNumber";
+      session.state.flowNextState = "requestPaymentMethod";
       session.attempts.tvNumber = 0; // Reset attempts after successful validation
     } else {
       session.attempts.tvNumber++;
@@ -256,6 +371,57 @@ export class MessageHandler {
       }
     }
   }
+
+  static async validateEmail(email, message, session, userName, businessPhoneNumberId) {
+    if (email === "user@example.com") {
+      session.state.userEmail = email;
+      const m_service = session.state.currentService;
+      const m_email = session.state.userEmail;
+
+      const paymentDetails = await PaymentService.generatePaymentDetails(
+        m_service,
+        500,
+        session.userName,
+        m_email
+      );
+
+      session.setPaymentDetails(paymentDetails);
+      const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
+
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        `Here is the payment link, ${session.userName} 👇 \n\n ${paymentLink} \n\n Click on the link above 👆 to paying using your bank card.\n\n Email: ${m_email} \n Paying for ${session.state.currentService} with Card! `
+      );
+      session.state.flowNextState = null;
+      session.state.overallProgress = 100;
+      session.attempts.email = 0;
+    } else {
+      session.attempts.email++;
+      if (session.attempts.email < 3) {
+
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          `Invalid email address. You have ${3 - session.attempts.email
+          } attempts left. Please try again.`,
+          message.id
+        );
+      } else {
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          `You have exceeded the maximum number of attempts. your session has ended.`
+        );
+        session.attempts.email = 0; // Reset attempts after exceeding the limit
+        session.resetState();
+        this.showServices(message, session, businessPhoneNumberId);// Show the list of services
+      }
+    }
+
+  }
+
+
 
   static async validatePhoneNumber(phoneNumber, message, session, userName, businessPhoneNumberId) {
     if (phoneNumber === "9876543210") {
@@ -322,7 +488,7 @@ export class MessageHandler {
         `Your Water account number is ${waterNumber}. Please send 'confirm' to proceed.`,
         message.id
       );
-      session.state.flowNextState = "requestEmail";
+      session.state.flowNextState = "requestPaymentMethod";
       session.attempts.waterNumber = 0; // Reset attempts after successful validation
     } else {
       session.attempts.waterNumber++;
@@ -357,7 +523,7 @@ export class MessageHandler {
         `Your meter number is ${meterNumber}. Please type 'confirm' to proceed.`,
         message.id
       );
-      session.state.flowNextState = "requestPhoneNumber";
+      session.state.flowNextState = "requestPaymentMethod";
       session.attempts.meterNumber = 0; // Reset attempts after successful validation
     } else {
       session.attempts.meterNumber++;
@@ -383,42 +549,7 @@ export class MessageHandler {
 
   }
 
-  static async validateEmail(email, message, session, userName, businessPhoneNumberId) {
-    if (email === "user@example.com") {
 
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        `Here is your payment link: [Payment Link]`,
-        message.id
-      );
-      session.state.flowNextState = null;
-      session.state.overallProgress = 100;
-      session.attempts.email = 0; // Reset attempts after successful validation
-    } else {
-      session.attempts.email++;
-      if (session.attempts.email < 3) {
-
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `Invalid email address. You have ${3 - session.attempts.email
-          } attempts left. Please try again.`,
-          message.id
-        );
-      } else {
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `You have exceeded the maximum number of attempts. your session has ended.`
-        );
-        session.attempts.email = 0; // Reset attempts after exceeding the limit
-        session.resetState();
-        this.showServices(message, session, businessPhoneNumberId);// Show the list of services
-      }
-    }
-
-  }
 
   /**
    * Determines the intent of the user's message based on keywords

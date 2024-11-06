@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import logger from './config/logger.js';
 import router from './routes/api.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import { URLSHORTNER } from './services/url_shortner.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,21 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/whatsapp', router);
+
+app.get('/', (req, res) => {
+  res.send('<b>Welcome</b>').status(200).json({ status: 'OK', timestamp: new Date() });
+});
+
+app.get('/:shortCode', (req, res) => {
+  const shortCode = req.params.shortCode;
+  const urls = URLSHORTNER.loadUrls();
+  const originalUrl = urls[shortCode];
+  if (originalUrl) {
+    res.redirect(originalUrl);
+  } else {
+    res.status(404).json({ error: 'Short URL not found' });
+  }
+});
 
 // 404 handler
 app.use((req, res) => {

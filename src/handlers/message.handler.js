@@ -425,18 +425,8 @@ export class MessageHandler {
 
   static async validatePhoneNumber(phoneNumber, message, session, userName, businessPhoneNumberId) {
     if (phoneNumber === "9876543210") {
-      // await sendMessage(
-      //   message,
-      //   `✨ Thank you! ${userName}, I have sent a payment prompt to your phone number: Please Authorize Payment to complete the transaction`,
-      //   userName
-      // );
 
       const m_service = session.state.currentService;
-      const cleaned_name = InputValidator.replaceSpacesWithHyphens(userName);
-      const cleaned_details = InputValidator.replaceSpacesWithHyphens(
-        `Service Payment for ${m_service}`
-      );
-
       const paymentDetails = await PaymentService.generatePaymentDetails(
         m_service,
         500, // Example amount
@@ -445,13 +435,13 @@ export class MessageHandler {
       );
 
       session.setPaymentDetails(paymentDetails);
-      // // Generate and send payment link
-      const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
-
+      // post payment to api endpoint
+      // const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Thank you! ${userName}, Here is the payment link \n\n ${paymentLink} \n\n click on the link to complete the Payment for ${session.state.currentService}`
+        `Thank you! ${session.userName},\n\n I have sent a payment prompt to your phone number: ${phoneNumber} \n\n Please Authorize Payment to complete the transaction`,
+        message.id
       );
       session.state.flowNextState = null;
       session.state.overallProgress = 100;

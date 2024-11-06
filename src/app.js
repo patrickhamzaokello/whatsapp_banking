@@ -38,7 +38,7 @@ app.get('/health', (req, res) => {
 app.use('/api/whatsapp', router);
 
 app.get('/', (req, res) => {
-  res.send('<b>Welcome</b>').status(200).json({ status: 'OK', timestamp: new Date() });
+  res.send('<b>Welcome</b>').status(200);
 });
 
 app.get('/:shortCode', (req, res) => {

@@ -282,7 +282,6 @@ export class MessageHandler {
       // // Generate and send payment link
       const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
 
-
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,

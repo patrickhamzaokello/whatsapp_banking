@@ -1,5 +1,5 @@
 import logger from '../config/logger.js';
-import {Session} from '../models/Session.js'
+import { Session } from '../models/Session.js'
 export class SessionService {
   static sessions = new Map();
 
@@ -22,4 +22,5 @@ export class SessionService {
     this.sessions.delete(phoneNumber);
     logger.info('Session removed', { phoneNumber });
   }
+
 }

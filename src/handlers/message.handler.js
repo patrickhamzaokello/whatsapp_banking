@@ -201,36 +201,142 @@ export class MessageHandler {
   }
 
   static async requestPaymentMethod(message, session, userName, businessPhoneNumberId) {
-    // Prompt user to choose between card or mobile payment
-    await WhatsAppService.sendMessage(
-      businessPhoneNumberId,
-      message.from,
-      `Please choose your payment method:\nType "Card" for card payments 💳\nType "Mobile" for mobile payments 📱`,
-      message.id
-    );
-    session.state.flowNextState = "validatePaymentMethod"; // Set the next state
+    try {
+      const paymentOptions = [
+        { type: 'Card', emoji: '💳', description: 'Visa/Mastercard payment' },
+        { type: 'Mobile', emoji: '📱', description: 'MTM/Airtel payment' }
+      ];
+
+      // Format payment options message
+      const paymentMessage =
+        `Hello ${userName},\n\n` +
+        `Please choose your preferred payment method:\n\n` +
+        paymentOptions.map(option =>
+          `*${option.type}* ${option.emoji}\n` +
+          `└ ${option.description}`
+        ).join('\n\n') +
+        '\n\nReply with either *Card* or *Mobile* to proceed.';
+
+      // Send payment options message
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        paymentMessage,
+        message.id
+      );
+
+      // Update session state
+      session.state.flowNextState = "validatePaymentMethod";
+      session.state.paymentOptions = paymentOptions.map(option => option.type.toLowerCase());
+
+    } catch (error) {
+      // Handle any errors
+      console.error('Error in requestPaymentMethod:', error);
+
+      const errorMessage =
+        `Sorry ${userName}, we encountered an error while processing your request.\n` +
+        `Please try again or contact support if the issue persists.`;
+
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        errorMessage,
+        message.id
+      );
+    }
   }
 
   static async validatePaymentMethod(text, message, session, businessPhoneNumberId) {
-    const choice = text.toLowerCase();
-    if (choice === "card" || choice === "mobile") {
-      // Store user’s payment method choice
-      session.state.paymentMethod = choice;
+    try {
+      const choice = text.toLowerCase().trim();
+      // const validOptions = session.state.paymentOptions || ['card', 'mobile'];
+      const validOptions = session.state.paymentOptions
+
+      if (validOptions.includes(choice)) {
+        // Store the payment method in session
+        session.state.paymentMethod = choice;
+
+        // Prepare confirmation message based on payment method
+        const confirmationMessage = {
+          card:
+            `You have selected Card Payment 💳\n\n` +
+            `Amount: UGX ${session.getPaymentDetails()?.amount || 500}\n` +
+            `Service: ${session.state.currentService}\n\n`,
+          mobile:
+            `You have selected Mobile Payment 📱\n\n` +
+            `Amount: UGX ${session.getPaymentDetails()?.amount || 500}\n` +
+            `Service: ${session.state.currentService}\n\n`
+        };
+
+        // Send confirmation message
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          confirmationMessage[choice],
+          message.id
+        );
+
+        // Update session state
+        session.state.flowNextState = "finalizePayment";
+        session.attempts.paymentMethod = 0;
+
+        // Proceed to payment finalization
+        await this.finalizePayment(message, session, businessPhoneNumberId);
+
+      } else {
+        // Handle invalid payment method selection
+        session.attempts.paymentMethod = (session.attempts.paymentMethod || 0) + 1;
+
+        if (session.attempts.paymentMethod < 3) {
+          const remainingAttempts = 3 - session.attempts.paymentMethod;
+          const errorMessage =
+            `Invalid payment method selection.\n\n` +
+            `Please choose your payment method:\n` +
+            `• Reply with *Card* for card payment 💳\n` +
+            `• Reply with *Mobile* for Mobile Money payment 📱\n\n` +
+            `You have ${remainingAttempts} ${remainingAttempts === 1 ? 'attempt' : 'attempts'} remaining.`;
+
+          await WhatsAppService.sendMessage(
+            businessPhoneNumberId,
+            message.from,
+            errorMessage,
+            message.id
+          );
+        } else {
+          // Reset session after maximum attempts
+          const sessionEndedMessage =
+            `You have exceeded the maximum number of attempts.\n` +
+            `Your session has been reset. Please start over to try again.`;
+
+          await WhatsAppService.sendMessage(
+            businessPhoneNumberId,
+            message.from,
+            sessionEndedMessage,
+            message.id
+          );
+
+          session.attempts.paymentMethod = 0;
+          session.resetState();
+          await this.showServices(message, session, businessPhoneNumberId);
+        }
+      }
+    } catch (error) {
+      // Handle any errors during validation
+      console.error('Error in validatePaymentMethod:', error);
+
+      const errorMessage =
+        `Sorry, we encountered an error processing your payment method selection.\n` +
+        `Please try again or contact support if the issue persists.`;
+
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `You selected ${choice === "card" ? "Card" : "Mobile"} payment. Proceeding...`,
+        errorMessage,
         message.id
       );
-      session.state.flowNextState = "finalizePayment"; // Move to the final payment step
-      await this.finalizePayment(message, session, businessPhoneNumberId);
-    } else {
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        `Invalid choice. Please type "Card" or "Mobile" to choose your payment method.`,
-        message.id
-      );
+
+      // Reset session state on error
+      session.state.flowNextState = "requestPaymentMethod";
     }
   }
 
@@ -373,101 +479,213 @@ export class MessageHandler {
   }
 
   static async validateEmail(email, message, session, userName, businessPhoneNumberId) {
-    if (email === "user@example.com") {
-      session.state.userEmail = email;
-      const m_service = session.state.currentService;
-      const m_email = session.state.userEmail;
+    // RFC 5322 compliant email regex
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
-      const paymentDetails = await PaymentService.generatePaymentDetails(
-        m_service,
-        500,
-        session.userName,
-        m_email
-      );
+    const isValidEmail = emailRegex.test(email);
 
-      session.setPaymentDetails(paymentDetails);
-      const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
+    if (isValidEmail) {
+      try {
+        // Store valid email
+        session.state.userEmail = email;
+        const serviceType = session.state.currentService;
 
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        `Here is the payment link, ${session.userName} 👇 \n\n ${paymentLink} \n\n Click on the link above 👆 to paying using your bank card.\n\n Email: ${m_email} \n Paying for ${session.state.currentService} with Card! `
-      );
-      session.state.flowNextState = null;
-      session.state.overallProgress = 100;
-      session.attempts.email = 0;
+        // Generate payment details
+        const paymentDetails = await PaymentService.generatePaymentDetails(
+          serviceType,
+          500,
+          session.userName,
+          email
+        );
+        const sessionPaymentDetails = {
+          amount: paymentDetails.amount,
+          service: paymentDetails.serviceType,
+          userName: paymentDetails.userName,
+          email: paymentDetails.userEmail
+        };
+
+        // Set payment details and generate link
+        session.setPaymentDetails(sessionPaymentDetails);
+        const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
+
+        // Construct payment message
+        const paymentMessage =
+          `Thank you ${session.userName}!\n\n` +
+          `Here is the payment link, 👉 ` +
+          `${paymentLink}\n\n` +
+          `Click on the link above 👆 to pay using your bank card.\n\n` +
+          `Email: ${email}\n` +
+          `Paying for ${serviceType} with Card!`;
+
+        // Send payment information
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          paymentMessage
+        );
+
+        // Reset flow state
+        session.state.flowNextState = null;
+        session.state.overallProgress = 100;
+        session.attempts.email = 0;
+
+      } catch (error) {
+        // Handle any payment service errors
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          "Sorry, we encountered an error processing your request. Please try again."
+        );
+        console.error('Payment processing error:', error);
+      }
     } else {
-      session.attempts.email++;
+      // Handle invalid email attempts
+      session.attempts.email = (session.attempts.email || 0) + 1;
+
       if (session.attempts.email < 3) {
+        const remainingAttempts = 3 - session.attempts.email;
+        const attemptsMessage =
+          `Invalid email address. ` +
+          `You have ${remainingAttempts} ${remainingAttempts === 1 ? 'attempt' : 'attempts'} left. ` +
+          `Please provide a valid email address (e.g., user@example.com).`;
 
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
           message.from,
-          `Invalid email address. You have ${3 - session.attempts.email
-          } attempts left. Please try again.`,
+          attemptsMessage,
           message.id
         );
       } else {
+        // Reset session after maximum attempts
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
           message.from,
-          `You have exceeded the maximum number of attempts. your session has ended.`
+          "You have exceeded the maximum number of attempts. Your session has ended."
         );
-        session.attempts.email = 0; // Reset attempts after exceeding the limit
+
+        session.attempts.email = 0;
         session.resetState();
-        this.showServices(message, session, businessPhoneNumberId);// Show the list of services
+        await this.showServices(message, session, businessPhoneNumberId);
       }
     }
-
   }
 
 
 
   static async validatePhoneNumber(phoneNumber, message, session, userName, businessPhoneNumberId) {
-    if (phoneNumber === "9876543210") {
+    // Regex for phone numbers starting with 256 or 0 (Ugandan format)
+    // Accepts formats: 256XXXXXXXXX, 0XXXXXXXXX, +256XXXXXXXXX
+    const phoneRegex = /^(?:256|\+256|0)?([17]\d{8}|[2-9]\d{8})$/;
 
-      const m_service = session.state.currentService;
-      const paymentDetails = await PaymentService.generatePaymentDetails(
-        m_service,
-        500, // Example amount
-        session.userName,
-        'default@email.com' // Replace with actual email
-      );
+    // Remove any spaces, hyphens or other characters
+    const cleanPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
 
-      session.setPaymentDetails(paymentDetails);
-      // post payment to api endpoint
-      // const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        `Thank you! ${session.userName},\n\n I have sent a payment prompt to your phone number: ${phoneNumber} \n\n Please Authorize Payment to complete the transaction`,
-        message.id
-      );
-      session.state.flowNextState = null;
-      session.state.overallProgress = 100;
-      session.attempts.phoneNumber = 0; // Reset attempts after successful validation
-    } else {
-      session.attempts.phoneNumber++;
-      if (session.attempts.phoneNumber < 3) {
+    // Standardize the phone number format
+    const formatPhoneNumber = (number) => {
+      if (number.startsWith('0')) {
+        return '256' + number.substring(1);
+      }
+      if (number.startsWith('+')) {
+        return number.substring(1);
+      }
+      return number;
+    };
+
+    const isValidPhone = phoneRegex.test(cleanPhoneNumber);
+
+    if (isValidPhone) {
+      try {
+        // Format phone number to standard format (256XXXXXXXXX)
+        const standardizedPhone = formatPhoneNumber(cleanPhoneNumber);
+        session.state.userPhone = standardizedPhone;
+
+        const serviceType = session.state.currentService;
+
+        // Generate payment details
+        const paymentDetails = await PaymentService.generatePaymentDetails(
+          serviceType,
+          500,
+          session.userName,
+          session.state.userPhone
+        );
+
+        const sessionPaymentDetails = {
+          amount: paymentDetails.amount,
+          service: paymentDetails.serviceType,
+          userName: paymentDetails.userName,
+          email: paymentDetails.userEmail
+      };
+
+        // Set payment details in session
+        session.setPaymentDetails(sessionPaymentDetails);
+
+        // Construct success message
+        const successMessage =
+          `Thank you ${session.userName}!\n\n` +
+          `I have sent a payment prompt to your phone number: ${standardizedPhone}\n\n` +
+          `Please check your phone and authorize the payment to complete the transaction.\n\n` +
+          `Service: ${serviceType}\n` +
+          `Amount: UGX 500`;
+
+        // Send confirmation message
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
           message.from,
-          `Invalid phone number. You have ${3 - session.attempts.phoneNumber
-          } attempts left. Please try again.`,
+          successMessage,
+          message.id
+        );
+
+        // Update session state
+        session.state.flowNextState = null;
+        session.state.overallProgress = 100;
+        session.attempts.phoneNumber = 0;
+
+      } catch (error) {
+        // Handle payment service errors
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          "Sorry, we encountered an error processing your payment request. Please try again."
+        );
+        console.error('Payment processing error:', error);
+      }
+    } else {
+      // Handle invalid phone number attempts
+      session.attempts.phoneNumber = (session.attempts.phoneNumber || 0) + 1;
+
+      if (session.attempts.phoneNumber < 3) {
+        const remainingAttempts = 3 - session.attempts.phoneNumber;
+        const attemptsMessage =
+          `Invalid phone number format.\n\n` +
+          `Please enter a valid phone number:\n` +
+          `• Starting with 256... (e.g., 2567xxxxxxxx)\n` +
+          `• Starting with 0... (e.g., 07xxxxxxxx)\n` +
+          `• Or starting with +256... (e.g., +2567xxxxxxxx)\n\n` +
+          `You have ${remainingAttempts} ${remainingAttempts === 1 ? 'attempt' : 'attempts'} remaining.`;
+
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          message.from,
+          attemptsMessage,
           message.id
         );
       } else {
+        // Reset session after maximum attempts
+        const sessionEndedMessage =
+          `You have exceeded the maximum number of attempts.\n` +
+          `Your session has ended. Please start over to try again.`;
+
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
           message.from,
-          `You have exceeded the maximum number of attempts. your session has ended.`
+          sessionEndedMessage
         );
-        session.attempts.phoneNumber = 0; // Reset attempts after exceeding the limit
+
+        session.attempts.phoneNumber = 0;
         session.resetState();
-        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
+        await this.showServices(message, session, businessPhoneNumberId);
       }
     }
-
   }
 
   static async validateWaterNumber(waterNumber, message, session, userName, businessPhoneNumberId) {

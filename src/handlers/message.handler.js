@@ -614,7 +614,7 @@ export class MessageHandler {
           service: paymentDetails.serviceType,
           userName: paymentDetails.userName,
           email: paymentDetails.userEmail
-      };
+        };
 
         // Set payment details in session
         session.setPaymentDetails(sessionPaymentDetails);
@@ -839,16 +839,17 @@ export class MessageHandler {
    */
   static async showServices(message, session, businessPhoneNumberId) {
     const servicesMessage =
-      `Hello ${session.userName}, welcome to our payment service. Please choose a service to pay for using mobile money:\n\n` +
-      `1. TV Subscription (GOTV & DSTV)\n` +
-      `2. Water Bill (NWSC)\n` +
-      `3. Electricity Bill (UMEME/YAKA)\n` +
-      `4. URA Reference Number (PRN)\n\n` +
-      `To proceed, reply with  "Pay TV," "Pay Water," "Pay Electricity," or "Pay PRN."\n\n` +
-      `Thank you for choosing our service.\n\n\n` +
-      `1. Contact\n` +
-      `2. FAQ\n` +
-      `3. About\n`;;
+      `Hello ${session.userName}, \n\n` +
+      `Pay TV Subscription (GOTV & DSTV)\n` +
+      `Pay Water Bill (NWSC)\n` +
+      `Pay Electricity Bill (UMEME/YAKA)\n` +
+      `Pay URA Reference Number (PRN)\n\n` +
+      `👉 *To proceed, reply with  "Pay TV," "Pay Water," "Pay Yaka," or "Pay PRN.*"\n\n` +
+      `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved.\n\n\n` +
+     `For more info, reply with text below:\n` +
+      `📞 (Contact) \n` +
+      `🌐 (About) \n` +
+      `🧩 (FAQ) \n\n`;
 
     await WhatsAppService.sendMessage(
       businessPhoneNumberId,
@@ -860,45 +861,43 @@ export class MessageHandler {
 
   static async showAssistantInfo(message, session, businessPhoneNumberId) {
     const infoMessage =
-      `Hello! ${session.userName} 👋 Welcome to the GTbank Online Assistant.\n\n` +
-      `I am here to assist you with your banking needs, provide information about our services, and help you with transactions directly through WhatsApp.\n\n` +
-      `For the best experience, please ensure you are using the official WhatsApp app, available on the Google Play Store or Apple App Store.\n\n` +
-      `To get started, reply with:\n` +
-      `1. To contact us directly\n` +
-      `2. To read our Frequently Asked Questions (FAQ)\n\n` +
-      `Thank you for choosing GTbank!`;
+      `Hello, ${session.userName} 👋 Welcome to GTbank Uganda's Online Assistant.\n\n` +
+      `I'm here to help with your banking needs and transactions via WhatsApp.\n\n` +
+      `To begin, reply with:\n` +
+      `📞 (Contact) \n` +
+      `🌐 (About) \n` +
+      `🧩 (FAQ) \n\n` +
+      `Thank you for choosing GTbank! \n\n`+
+      `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved`;
 
     const contactMessage =
-      `For assistance, you can reach us through the following channels:\n\n` +
-      `📞 **Phone Numbers:**\n` +
-      `- Customer Service: +123-456-7890\n` +
-      `- Support: +123-456-7891\n\n` +
-      `🌐 **Website:** [www.gtbank.com](http://www.gtbank.com)\n\n` +
-      `📍 **Location Address:**\n` +
-      `GTbank Head Office, \n` +
-      `123 Banking St, \n` +
-      `City, Country\n\n` +
+      `Need help? Reach us through:\n\n` +
+      `📞 **Phone:**\n` +
+      `- Customer Service: +256-200-710-500, +256-703-718-500\n` +
+      `- Support: +256-785-866-559\n\n` +
+      `🌐 **Website:** https://www.gtbank.co.ug/ \n\n` +
+      `📍 **Address:**\n` +
+      `Plot 56 Kira Road.\nP O Box 7323 Kampala, Uganda.\n\n` +
       `✉️ **Email:** support@gtbank.com\n\n` +
-      `We are here to help you with any inquiries you may have!`;
-
+      `We’re here to assist with any inquiries!`;
 
     const faqMessage =
-      `Frequently Asked Questions (FAQ) about Services:\n\n` +
-      `**1. What services can I pay for using the GTbank Online Assistant?**\n` +
-      `You can pay for the following services directly through the assistant:\n` +
-      `- TV Subscription (GOTV & DSTV)\n` +
-      `- Water Bill (NWSC)\n` +
-      `- Electricity Bill (UMEME/YAKA)\n` +
-      `- URA Reference Number (PRN)\n\n` +
-      `**2. How do I make a payment?**\n` +
-      `Simply reply with the number corresponding to the service you wish to pay for, or type the service name (e.g., "Pay TV").\n\n` +
-      `**3. Can I use mobile money for payments?**\n` +
-      `Yes, all payments are processed through mobile money for your convenience.\n\n` +
-      `**4. What if I need further assistance?**\n` +
-      `If you need help beyond these services, you can reply with "Contact us" for direct support or check our website for more information.\n\n` +
-      `**5. Is my payment information secure?**\n` +
-      `Absolutely! We take your security seriously and use secure payment processes to protect your information.\n\n` +
-      `If you have any other questions, feel free to ask!`;
+      `GTbank Online Assistant FAQs:\n\n` +
+      `**1. Available Services:**\n` +
+      `- URA (PRN)\n` +
+      `- National Water (NWSC)\n` +
+      `- Electricity (UMEME/YAKA)\n` +
+      `- TV (GOTV & DSTV)\n\n` +
+      `**2. Making Payments:**\n` +
+      `Reply with the service number or type (e.g., "Pay TV").\n\n` +
+      `**3. Payment Options:**\n` +
+      `All payments are processed through mobile money or bank cards.\n\n` +
+      `**4. Further Assistance:**\n` +
+      `Reply with "Contact us" or visit our website for support.\n\n` +
+      `**5. Security:**\n` +
+      `Your payment information is secure with us.\n\n` +
+      `Have other questions? Just ask!`;
+
 
     let responseMessage;
 

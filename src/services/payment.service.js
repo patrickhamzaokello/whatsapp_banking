@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import logger from '../config/logger.js';
 import {config} from '../config/environment.js';
 import {PaymentError} from '../errors/custom-errors.js';
+import { URLSHORTNER } from './url_shortner.service.js';
 
 export class PaymentService {
   static async generatePaymentDetails(service, amount, userName, email) {
@@ -58,7 +59,14 @@ export class PaymentService {
         `gtp_EmailAddress=${emailAddress}`;
 
       logger.info('Payment link generated', { orderId, payerName, service: paymentDetails.service });
-      return url;
+
+      //shorten the url and return
+      const shortCode = URLSHORTNER.generateShortCode();
+      URLSHORTNER.saveUrl(shortCode, url);
+      const shorten_url = `https://socialbanking.gtbank.co.ug/${shortCode}`;
+
+      
+      return shorten_url;
 
     } catch (error) {
       logger.error('Error generating payment link', { error, paymentDetails });

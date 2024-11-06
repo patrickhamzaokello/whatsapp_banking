@@ -12,11 +12,9 @@ export class URLSHORTNER {
         const charsLength = chars.length;
         let shortCode = '';
 
-        // Generate random bytes, then map each byte to a character in the `chars` set
         const randomBytes = crypto.randomBytes(length);
 
         for (let i = 0; i < length; i++) {
-            // Map each byte to a character in the `chars` array
             shortCode += chars[randomBytes[i] % charsLength];
         }
 

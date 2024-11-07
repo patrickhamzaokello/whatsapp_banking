@@ -30,7 +30,7 @@ export class MessageHandler {
       switch (intent) {
         case 'PAY_TV':
         case 'PAY_WATER':
-        case 'PAY_ELECTRICITY':
+        case 'PAY_UMEME':
         case 'PAY_PRN':
           await this.startServiceFlow(intent, message, session, businessPhoneNumberId);
           break;
@@ -774,8 +774,8 @@ export class MessageHandler {
       if (text.includes('water') || text.includes('nwsc')) {
         return 'PAY_WATER';
       }
-      if (text.includes('electricity') || text.includes('power') || text.includes('yaka')) {
-        return 'PAY_ELECTRICITY';
+      if (text.includes('umeme') || text.includes('power') || text.includes('yaka')) {
+        return 'PAY_UMEME';
       }
       if (text.includes('prn') || text.includes('ura')) {
         return 'PAY_PRN';

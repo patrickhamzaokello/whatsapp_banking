@@ -26,6 +26,7 @@ router.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
+  res.setHeader('Content-Type', 'text/plain');
 
   if (mode === "subscribe" && token === config.webhook.verifyToken) {
     res.status(200).send(challenge);

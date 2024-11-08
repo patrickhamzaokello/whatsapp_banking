@@ -3,6 +3,7 @@ import logger from '../config/logger.js';
 import { config } from '../config/environment.js';
 import { MessageHandler } from '../handlers/message.handler.js';
 import { URLSHORTNER } from '../services/url_shortner.service.js';
+import { PrnService } from '../services/prns.service.js';
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
@@ -46,6 +47,22 @@ router.post('/shorten', (req, res) => {
   const shortCode = URLSHORTNER.generateShortCode();
   URLSHORTNER.saveUrl(shortCode, url);
   res.json({ shortUrl: `https://socialbanking.gtbank.co.ug/${shortCode}` });
+});
+
+
+router.post('/validate-prn', async (req, res) => {
+  const prnService = new PrnService();
+  const { prn } = req.body;
+  if (!prn) {
+    return res.status(400).json({ error: 'PRN is required' });
+  }
+
+  try {
+    const result = await prnService.validatePRN(prn);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 

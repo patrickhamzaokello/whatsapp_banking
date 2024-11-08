@@ -4,6 +4,7 @@ import { WhatsAppService } from '../services/whatsapp.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import { InputValidator } from '../validators/input.validator.js';
 import { Helpers } from '../utils/helpers.js';
+import { PRN_Validator } from '../validators/prns.validator.js';
 
 export class MessageHandler {
   static async handleIncoming(message, contact, businessPhoneNumberId) {
@@ -411,38 +412,42 @@ export class MessageHandler {
   }
 
   static async validatePrn(prn, message, session, userName, businessPhoneNumberId) {
-    if (prn === "PRN12345") {
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        `✨ I have found your PRN Details is ${prn}. \n\nPlease send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed.`,
-        message.id
-      );
-      session.state.flowNextState = "requestPaymentMethod";
-      session.attempts.prn = 0; // Reset attempts after successful validation
-    } else {
-      session.attempts.prn++;
-      if (session.attempts.prn < 3) {
 
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `Invalid PRN. You have ${3 - session.attempts.prn
-          } attempts left. Please try again.`,
-          message.id
-        );
-      } else {
+    const validator = new PRN_Validator();
+    await validator.validatePrn(prn, message, session, userName, businessPhoneNumberId)
 
-        await WhatsAppService.sendMessage(
-          businessPhoneNumberId,
-          message.from,
-          `You have exceeded the maximum number of attempts ⚠. your session has ended.`
-        );
-        session.attempts.prn = 0; // Reset attempts after exceeding the limit
-        session.resetState()
-        this.showServices(message, session, businessPhoneNumberId); // Show the list of services
-      }
-    }
+    // if (prn === "PRN12345") {
+    //   await WhatsAppService.sendMessage(
+    //     businessPhoneNumberId,
+    //     message.from,
+    //     `✨ I have found your PRN Details is ${prn}. \n\nPlease send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed.`,
+    //     message.id
+    //   );
+    //   session.state.flowNextState = "requestPaymentMethod";
+    //   session.attempts.prn = 0; // Reset attempts after successful validation
+    // } else {
+    //   session.attempts.prn++;
+    //   if (session.attempts.prn < 3) {
+
+    //     await WhatsAppService.sendMessage(
+    //       businessPhoneNumberId,
+    //       message.from,
+    //       `Invalid PRN. You have ${3 - session.attempts.prn
+    //       } attempts left. Please try again.`,
+    //       message.id
+    //     );
+    //   } else {
+
+    //     await WhatsAppService.sendMessage(
+    //       businessPhoneNumberId,
+    //       message.from,
+    //       `You have exceeded the maximum number of attempts ⚠. your session has ended.`
+    //     );
+    //     session.attempts.prn = 0; // Reset attempts after exceeding the limit
+    //     session.resetState()
+    //     this.showServices(message, session, businessPhoneNumberId); // Show the list of services
+    //   }
+    // }
   }
 
   static async validateTvNumber(tvNumber, message, session, userName, businessPhoneNumberId) {

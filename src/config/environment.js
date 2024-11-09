@@ -27,7 +27,8 @@ export const config = {
     graphApiToken: process.env.GRAPH_API_TOKEN
   },
   bank_api: {
-    prnDetailsEndpoint: process.env.PRN_DETAILS_ENDPOINT
+    prnDetailsEndpoint: process.env.PRN_DETAILS_ENDPOINT,
+    prnUniversalUraCompleteTransaction: process.env.PRN_UNI_COMPT_ENDPOINT
   },
   payment: {
     customerCode: process.env.CUSTOMER_CODE,

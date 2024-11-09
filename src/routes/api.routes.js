@@ -65,6 +65,24 @@ router.post('/validate-prn', async (req, res) => {
   }
 });
 
+router.post('/complete-prn', async (req, res) => {
+  const prnService = new PrnService();
+  const { prn,phone_number } = req.body;
+  if (!prn) {
+    return res.status(400).json({ error: 'PRN is required' });
+  }
+  if (!phone_number) {
+    return res.status(400).json({ error: 'Phone number is required' });
+  }
+
+  try {
+    const result = await prnService.universialPRNCompleteTransaction(prn,phone_number);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 
 router.get("/", (req, res) => {

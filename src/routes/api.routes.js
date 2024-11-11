@@ -13,7 +13,7 @@ router.post("/webhook", async (req, res) => {
     const businessPhoneNumberId = req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
     if (message?.type === "text") {
-      await MessageHandler.handleIncoming(message, contact, businessPhoneNumberId);
+      await MessageHandler.handleIncomingWithQueue(message, contact, businessPhoneNumberId);
     }
 
     res.sendStatus(200);

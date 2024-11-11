@@ -1,7 +1,7 @@
 import logger from '../config/logger.js';
-import { MessageHandler } from '../handlers/message.handler.js';
+import { TestMessageHandler } from '../handlers/test.message.handler.js';
 
-class MessageQueue {
+class TestMessageQueue {
   constructor(concurrency = 3) {
     this.queue = [];
     this.processing = new Set();
@@ -63,7 +63,7 @@ class MessageQueue {
   // Process individual message
   async processMessage(message, contact, businessPhoneNumberId, processId) {
     try {
-      await MessageHandler.handleIncoming(message, contact, businessPhoneNumberId);
+      await TestMessageHandler.handleIncoming(message, contact, businessPhoneNumberId);
       logger.info('Message processed successfully', { messageId: message.id });
     } catch (error) {
       logger.error('Failed to process message', { 
@@ -107,5 +107,5 @@ class MessageQueue {
 }
 
 // Create singleton instance
-const messageQueue = new MessageQueue();
-export default messageQueue;
+const Test_message_queue = new TestMessageQueue();
+export default Test_message_queue;

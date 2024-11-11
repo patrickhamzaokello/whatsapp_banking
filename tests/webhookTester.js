@@ -77,7 +77,7 @@ class WebhookTester {
       const contact = webhookPayload.entry[0].changes[0].value.contacts[0];
       const businessPhoneNumberId = webhookPayload.entry[0].changes[0].value.metadata.phone_number_id;
 
-      await TestMessageHandler.handleIncoming(message, contact, businessPhoneNumberId);
+      await TestMessageHandler.handleIncomingWithQueue(message, contact, businessPhoneNumberId);
       
       this.results.successfulRequests++;
       

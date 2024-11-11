@@ -7,35 +7,35 @@ async function runTests() {
     {
       name: 'Light Load Test',
       config: {
-        totalRequests: 10,
-        batchSize: 2,
-        delayBetweenBatches: 1000
-      }
-    },
-    {
-      name: 'Normal Load Test',
-      config: {
-        totalRequests: 50,
-        batchSize: 5,
-        delayBetweenBatches: 500
-      }
-    },
-    {
-      name: 'Peak Load Test',
-      config: {
-        totalRequests: 100,
-        batchSize: 10,
-        delayBetweenBatches: 250
-      }
-    },
-    {
-      name: 'Stress Test',
-      config: {
-        totalRequests: 200,
-        batchSize: 20,
+        totalRequests: 1000,
+        batchSize: 50,
         delayBetweenBatches: 100
       }
-    }
+    },
+    // {
+    //   name: 'Normal Load Test',
+    //   config: {
+    //     totalRequests: 50,
+    //     batchSize: 5,
+    //     delayBetweenBatches: 500
+    //   }
+    // },
+    // {
+    //   name: 'Peak Load Test',
+    //   config: {
+    //     totalRequests: 100,
+    //     batchSize: 10,
+    //     delayBetweenBatches: 250
+    //   }
+    // },
+    // {
+    //   name: 'Stress Test',
+    //   config: {
+    //     totalRequests: 200,
+    //     batchSize: 20,
+    //     delayBetweenBatches: 100
+    //   }
+    // }
   ];
 
   for (const scenario of testScenarios) {

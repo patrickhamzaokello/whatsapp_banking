@@ -5,8 +5,13 @@ import { InputValidator } from '../validators/input.validator.js';
 import { Helpers } from '../utils/helpers.js';
 import { PRN_Validator } from '../validators/prns.validator.js';
 import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
+import messageQueue from '../queue/messageQueue.js';
 
 export class TestMessageHandler {
+  static async handleIncomingWithQueue(message, contact, businessPhoneNumberId) {
+    await messageQueue.enqueue(message, contact, businessPhoneNumberId);
+  }
+  
   static async handleIncoming(message, contact, businessPhoneNumberId) {
     try {
       const userPhone = contact.wa_id;

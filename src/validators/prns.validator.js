@@ -39,7 +39,7 @@ export class PRN_Validator {
         `Taxpayer Name: ${result.details.taxpayerName}\n` +
         `Expiry Date: ${result.details.expiryDate}\n` +
         `Description: ${result.details.description}\n\n` +
-        `👉Please send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed to pay for this PRN.\n\n`;
+        `👉 Please send 'confirm' to proceed with payment or 'cancel' to stop.\n\n`;
 
 
         // available to pay

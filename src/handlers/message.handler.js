@@ -9,14 +9,30 @@ import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
 import messageQueue from '../queue/messageQueue.js';
 
 export class MessageHandler {
+  static CONTROL_COMMANDS = {
+    CANCEL: ['cancel', 'stop', 'exit'],
+    CHANGE_PAYMENT: ['change payment', 'switch payment', 'different payment'],
+    HELP: ['help', 'support', '?'],
+    START_OVER: ['start over', 'restart', 'begin again']
+  };
+
+  static PAYMENT_METHOD_STATES = [
+    'validatePaymentMethod',
+    'requestPaymentMethod',
+    'validateEmail',
+    'validatePhoneNumber',
+    // 'finalizePayment'
+  ];
+
   static async handleIncomingWithQueue(message, contact, businessPhoneNumberId) {
     await messageQueue.enqueue(message, contact, businessPhoneNumberId);
   }
-  
+
   static async handleIncoming(message, contact, businessPhoneNumberId) {
     try {
       const userPhone = contact.wa_id;
       const userName = contact.profile.name;
+      const messageText = message.text.body.toLowerCase();
 
       logger.info(`[incoming] User: ${contact.wa_id} - Message: ${message.text.body}`);
 
@@ -25,6 +41,12 @@ export class MessageHandler {
 
       session.resetTimeout();
       await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message.id);
+
+      // check for control commands first
+      if (await this.handleControlCommands(messageText, message, session, businessPhoneNumberId)) {
+        return; // Control command was handled, exit
+      }
+
       const intent = this.determineIntent(message.text.body);
       await this.processIntent(intent, message, session, businessPhoneNumberId);
 
@@ -66,13 +88,221 @@ export class MessageHandler {
   }
 
 
+  static async handleControlCommands(messageText, message, session, businessPhoneNumberId) {
+    // Check for cancel command
+    if (this.CONTROL_COMMANDS.CANCEL.includes(messageText)) {
+      await this.cancelTransaction(message, session, businessPhoneNumberId);
+      return true;
+    }
+
+    // Check for change payment method command
+    if (this.CONTROL_COMMANDS.CHANGE_PAYMENT.includes(messageText)) {
+      await this.handlePaymentMethodChange(message, session, businessPhoneNumberId);
+      return true;
+    }
+
+    // Check for help command
+    if (this.CONTROL_COMMANDS.HELP.includes(messageText)) {
+      await this.showHelpMessage(message, session, businessPhoneNumberId);
+      return true;
+    }
+
+    // Check for start over command
+    if (this.CONTROL_COMMANDS.START_OVER.includes(messageText)) {
+      await this.startOver(message, session, businessPhoneNumberId);
+      return true;
+    }
+
+    return false; // No control command matched
+  }
+
+
+  static async cancelTransaction(message, session, businessPhoneNumberId) {
+    const cancelMessage =
+      `Transaction cancelled.\n\n` +
+      `Thank you for using GTBank services. Would you like to:\n\n` +
+      `[pay **service** ]. Start a new transaction\n` +
+      `[menu]. Return to main menu\n\n` +
+      `Reply to proceed.`;
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      cancelMessage,
+      message.id
+    );
+
+    // Save the previous state in case user wants to resume
+    session.state.previousState = { ...session.state };
+    session.resetState();
+    session.state.flowNextState = "handleCancellation";
+  }
+
+  static async handlePaymentMethodChange(message, session, businessPhoneNumberId) {
+    // Check if user has reached payment method step
+    const hasReachedPaymentStep = session.state.flowCompletedStates?.includes('requestPaymentMethod') ||
+      this.PAYMENT_METHOD_STATES.includes(session.state.flowNextState);
+
+    if (!session.state.currentService) {
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        "No active transaction found. Please start a new transaction.",
+        message.id
+      );
+      return;
+    }
+
+    if (!hasReachedPaymentStep) {
+      const currentStep = session.state.flowNextState;
+      const stepMessage = this.getStepDescription(currentStep);
+
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        `You haven't reached the payment method selection step yet. ` +
+        `Please complete the current step first (${stepMessage}).\n\n` +
+        `You can type "help" to see available commands.`,
+        message.id
+      );
+      return;
+    }
+
+    // If we've reached here, user can change payment method
+    await this.changePaymentMethod(message, session, businessPhoneNumberId);
+  }
+
+  static getStepDescription(step) {
+    const stepDescriptions = {
+      validateTvNumber: "TV number validation",
+      validateWaterNumber: "water account number validation",
+      validateMeterNumber: "meter number validation",
+      validatePrn: "PRN validation",
+      requestPaymentMethod: "payment method selection",
+      validatePaymentMethod: "payment method validation",
+      validateEmail: "email validation",
+      validatePhoneNumber: "phone number validation",
+      finalizePayment: "payment finalization"
+    };
+
+    return stepDescriptions[step] || "current step";
+  }
+
+  static async changePaymentMethod(message, session, businessPhoneNumberId) {
+    // Store current progress and payment details
+    const currentProgress = {
+      service: session.state.currentService,
+      paymentDetails: session.getPaymentDetails(),
+      completedSteps: session.state.flowCompletedStates
+    };
+
+    session.state.paymentMethod = null;
+    session.state.userEmail = null;
+    session.state.userPhone = null;
+
+    // Remove payment-related completed steps while keeping service validation steps
+    session.state.flowCompletedStates = session.state.flowCompletedStates.filter(step =>
+      !this.PAYMENT_METHOD_STATES.includes(step)
+    );
+
+    const changeMessage =
+      `Changing payment method for your ${session.state.currentService.toUpperCase()} payment.\n\n` +
+      `Your previous information has been saved.`;
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      changeMessage,
+      message.id
+    );
+
+    // Return to payment method selection
+    await this.requestPaymentMethod(message, session, session.userName, businessPhoneNumberId);
+  }
+
+  static async showHelpMessage(message, session, businessPhoneNumberId) {
+    const currentStep = session.state.flowNextState;
+    const canChangePayment = this.PAYMENT_METHOD_STATES.includes(currentStep);
+
+    const helpMessage = 
+      `Available commands:\n\n` +
+      `• Type "cancel" to cancel the current transaction\n` +
+      `• Type "back" to go to the previous step\n` +
+      `• Type "start over" to begin a new transaction\n` +
+      `• Type "help" to see this message again\n` +
+      (canChangePayment ? `• Type "change payment" to select a different payment method\n` : '') +
+      `\nCurrent progress: ${this.getProgressMessage(session)}\n\n` +
+      `Need more assistance? Contact our support at GTbank`;
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      helpMessage,
+      message.id
+    );
+  }
+
+  static getProgressMessage(session) {
+    if (!session.state.currentService) {
+      return 'No active transaction';
+    }
+
+    const step = session.state.flowNextState;
+    const stepDescription = this.getStepDescription(step);
+    return `Processing ${session.state.currentService} payment - ${stepDescription}`;
+  }
+
+  static async startOver(message, session, businessPhoneNumberId) {
+    const confirmMessage =
+      `Are you sure you want to start over? All progress will be lost.\n\n` +
+      `Reply with:\n` +
+      `• "Yes" to confirm\n` +
+      `• "No" to continue current transaction`;
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      confirmMessage,
+      message.id
+    );
+
+    session.state.tempState = { ...session.state };
+    session.state.flowNextState = "confirmStartOver";
+  }
+
 
   static async processFlowStep(message, session, businessPhoneNumberId) {
     const text = message.text.body;
     const userName = session.userName;
     const flowNextState = session.state.flowNextState;
 
+    // Add to completed states for back functionality
+    if (flowNextState && flowNextState !== "confirmStartOver" && flowNextState !== "handleCancellation") {
+      session.state.flowCompletedStates = session.state.flowCompletedStates || [];
+      session.state.flowCompletedStates.push(flowNextState);
+    }
+
     switch (flowNextState) {
+      case "confirmStartOver":
+        if (text === "yes") {
+          session.resetState();
+          await this.showServices(message, session, businessPhoneNumberId);
+        } else if (text === "no") {
+          session.state = { ...session.state.tempState };
+          delete session.state.tempState;
+          await WhatsAppService.sendMessage(
+            businessPhoneNumberId,
+            message.from,
+            "Continuing with your transaction...",
+            message.id
+          );
+        }
+        break;
+
+      case "handleCancellation":
+        session.resetState();
+        await this.showServices(message, session, businessPhoneNumberId);
+        break;
       case "validateTvNumber":
         await this.validateTvNumber(
           text,
@@ -157,7 +387,7 @@ export class MessageHandler {
           await WhatsAppService.sendMessage(
             businessPhoneNumberId,
             message.from,
-            `Please send 'confirm' to proceed.`,
+            `Please send 'confirm' to proceed with payment or 'cancel' to stop.`,
             message.id
           );
         }
@@ -216,21 +446,31 @@ export class MessageHandler {
         { type: 'Mobile', emoji: '📱', description: 'MTM/Airtel payment' }
       ];
 
-      // Format payment options message
-      const paymentMessage =
-        `Hello ${userName},\n\n` +
-        `Please choose your preferred payment method:\n\n` +
-        paymentOptions.map(option =>
-          `*${option.type}* ${option.emoji}\n` +
-          `└ ${option.description}`
-        ).join('\n\n') +
-        '\n\nReply with either *Card* or *Mobile* to proceed.';
+      
+      // Show different message if changing payment method
+      const isChanging = session.state.flowCompletedStates?.includes('requestPaymentMethod');
+      
+      const paymentMessage = isChanging ?
+      `Please select your new payment method:\n\n` :
+      `Please choose your preferred payment method:\n\n`;
+
+
+      const fullMessage = 
+      `${paymentMessage}` +
+      paymentOptions.map(option =>
+        `*${option.type}* ${option.emoji}\n` +
+        `└ ${option.description}`
+      ).join('\n\n') +
+      '\n\nReply with either *Card* or *Mobile* to proceed.\n\n' +
+      `Available commands:\n` +
+      `• Type "cancel" to cancel transaction\n` +
+      `• Type "help" for more options`;
 
       // Send payment options message
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        paymentMessage,
+        fullMessage,
         message.id
       );
 
@@ -241,18 +481,25 @@ export class MessageHandler {
     } catch (error) {
       // Handle any errors
       console.error('Error in requestPaymentMethod:', error);
-
-      const errorMessage =
-        `Sorry ${userName}, we encountered an error while processing your request.\n` +
-        `Please try again or contact support if the issue persists.`;
-
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        errorMessage,
-        message.id
-      );
+      await this.handleError(message, session, businessPhoneNumberId);
     }
+  }
+
+
+  static async handleError(message, session, businessPhoneNumberId) {
+    const errorMessage =
+      `Sorry, we encountered an error processing your request.\n\n` +
+      `You can:\n` +
+      `• Type "start over" to begin again\n` +
+      `• Type "help" for assistance\n` +
+      `• Contact support at +256-200-710-500`;
+
+    await WhatsAppService.sendMessage(
+      businessPhoneNumberId,
+      message.from,
+      errorMessage,
+      message.id
+    );
   }
 
   static async validatePaymentMethod(text, message, session, businessPhoneNumberId) {
@@ -262,26 +509,23 @@ export class MessageHandler {
       const validOptions = session.state.paymentOptions
 
       if (validOptions.includes(choice)) {
+        // Check if payment method is being changed
+        const isChanging = session.state.flowCompletedStates?.includes('requestPaymentMethod');
+        const confirmMessage = isChanging ?
+          `You have changed your payment method to ${choice} payment.\n` :
+          `You have selected ${choice} payment.\n`;
         // Store the payment method in session
         session.state.paymentMethod = choice;
 
-        // Prepare confirmation message based on payment method
-        const confirmationMessage = {
-          card:
-            `You have selected Card Payment 💳\n\n` +
-            `Amount: UGX ${session.getPaymentDetails()?.amount || 500}\n` +
-            `Service: ${session.state.currentService}\n\n`,
-          mobile:
-            `You have selected Mobile Payment 📱\n\n` +
-            `Amount: UGX ${session.getPaymentDetails()?.amount || 500}\n` +
-            `Service: ${session.state.currentService}\n\n`
-        };
-
+        
         // Send confirmation message
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
           message.from,
-          confirmationMessage[choice],
+          `${confirmMessage}\n` +
+          `Amount: UGX ${session.getPaymentDetails()?.amount || 500}\n` +
+          `Service: ${session.state.currentService}\n\n` +
+          `Proceeding with payment details...`,
           message.id
         );
 
@@ -333,19 +577,7 @@ export class MessageHandler {
       // Handle any errors during validation
       console.error('Error in validatePaymentMethod:', error);
 
-      const errorMessage =
-        `Sorry, we encountered an error processing your payment method selection.\n` +
-        `Please try again or contact support if the issue persists.`;
-
-      await WhatsAppService.sendMessage(
-        businessPhoneNumberId,
-        message.from,
-        errorMessage,
-        message.id
-      );
-
-      // Reset session state on error
-      session.state.flowNextState = "requestPaymentMethod";
+      await this.handleError(message, session, businessPhoneNumberId);
     }
   }
 
@@ -431,7 +663,7 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your TV number is ${tvNumber}. Please send 'confirm' to proceed.`,
+        `Your TV number is ${tvNumber}. Please send 'confirm' to proceed with payment or 'cancel' to stop.`,
         message.id
       );
       session.state.flowNextState = "requestPaymentMethod";
@@ -556,7 +788,7 @@ export class MessageHandler {
   static async validatePhoneNumber(phoneNumber, message, session, userName, businessPhoneNumberId) {
     const phone_number_validator = new PhoneNumber_Validator();
     await phone_number_validator.validatePhonenumber(phoneNumber, message, session, userName, businessPhoneNumberId)
-    
+
   }
 
   static async validateWaterNumber(waterNumber, message, session, userName, businessPhoneNumberId) {
@@ -564,7 +796,7 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your Water account number is ${waterNumber}. Please send 'confirm' to proceed.`,
+        `Your Water account number is ${waterNumber}. Please send 'confirm' to proceed with payment or 'cancel' to stop.`,
         message.id
       );
       session.state.flowNextState = "requestPaymentMethod";
@@ -599,7 +831,7 @@ export class MessageHandler {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,
         message.from,
-        `Your meter number is ${meterNumber}. Please type 'confirm' to proceed.`,
+        `Your meter number is ${meterNumber}. Please type 'confirm' to proceed / 'cancel' .`,
         message.id
       );
       session.state.flowNextState = "requestPaymentMethod";
@@ -717,7 +949,7 @@ export class MessageHandler {
       `Pay URA Reference Number (PRN)\n\n` +
       `👉 *To proceed, reply with  "Pay TV," "Pay Water," "Pay Yaka," or "Pay PRN.*"\n\n` +
       `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved.\n\n\n` +
-     `For more info, reply with text below:\n` +
+      `For more info, reply with text below:\n` +
       `📞 (Contact) \n` +
       `🌐 (About) \n` +
       `🧩 (FAQ) \n\n`;
@@ -738,7 +970,7 @@ export class MessageHandler {
       `📞 (Contact) \n` +
       `🌐 (About) \n` +
       `🧩 (FAQ) \n\n` +
-      `Thank you for choosing GTbank! \n\n`+
+      `Thank you for choosing GTbank! \n\n` +
       `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved`;
 
     const contactMessage =

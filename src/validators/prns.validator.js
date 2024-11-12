@@ -41,6 +41,14 @@ export class PRN_Validator {
         `Description: ${result.details.description}\n\n` +
         `👉Please send '𝗰𝗼𝗻𝗳𝗶𝗿𝗺' to proceed to pay for this PRN.\n\n`;
 
+
+        // available to pay
+        session.addPRN({
+          number: prn,
+          amount: result.details.amount,
+          description: result.details.description
+        });
+
         await WhatsAppService.sendMessage(
             businessPhoneNumberId,
             message.from,

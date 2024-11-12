@@ -24,7 +24,7 @@ export class WhatsAppService {
           },
           data
         });
-  
+        logger.info(`[response] User: ${to} - Message: ${message}`);
         logger.info('Message sent successfully', { to, messageId });
         return response.data;
   

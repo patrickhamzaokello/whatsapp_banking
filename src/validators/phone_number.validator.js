@@ -33,50 +33,60 @@ export class PhoneNumber_Validator {
                 const serviceType = session.state.currentService;
                 // Construct success message
                 let successMessage =
-                     `Thank you ${session.userName}!\n\n` +
-                     `I have sent a payment prompt to your phone number: ${standardizedPhone}\n\n` +
-                     `Please check your phone and authorize the payment to complete the transaction.\n\n` +
-                     `Service: ${serviceType}\n` +
-                     `Amount: UGX 500`;
+                    `Thank you ${session.userName}!\n\n` +
+                    `I have sent a payment prompt to your phone number: ${standardizedPhone}\n\n` +
+                    `Please check your phone and authorize the payment to complete the transaction.\n\n` +
+                    `Service: ${serviceType}\n` +
+                    `Amount: UGX 500`;
 
                 if (serviceType == 'prn') {
                     // Initiate Universal PRN transction
                     const prnService = new PrnService();
-                    const result = await prnService.universialPRNCompleteTransaction("7250000042007", standardizedPhone);
 
-                    // if invalid prn
-                    if (result.status_code === "1013") {
-                        // Construct success message
-                        successMessage =
-                            `Hello ${session.userName}!\n\n` +
-                            `This is an ${result.status_description.toLowerCase()}\n\n` +
-                            `PRN: ${result.prn_number}\n` +
-                            `Phone: ${standardizedPhone}\n\n` +
-                            `Thanks, Your Session has ended`;
-                    }
-                    // if valid prn
-                    if (result.status_code === "1000") {
+                    const latestPRNDetails = session.getLatestPRN();
+                    if (latestPRNDetails) {
+                        const result = await prnService.universialPRNCompleteTransaction(latestPRNDetails.number, standardizedPhone);
 
-                        const status_desc = result.status_description;
-                        const search_text = status_desc.toLowerCase();
-                        let userdirection_message = "Thank you!";
-
-                        if (search_text.includes('pending authorisation')) {
-                            userdirection_message = "👉Please check your phone and authorize the payment to complete the transaction.";
+                        // if invalid prn
+                        if (result.status_code === "1013") {
+                            // Construct success message
+                            successMessage =
+                                `Hello ${session.userName}!\n\n` +
+                                `This is an ${result.status_description.toLowerCase()}\n\n` +
+                                `PRN: ${result.prn_number}\n` +
+                                `Phone: ${standardizedPhone}\n\n` +
+                                `Thanks, Your Session has ended`;
                         }
-                        // Construct success message
+                        // if valid prn
+                        if (result.status_code === "1000") {
+
+                            const status_desc = result.status_description;
+                            const search_text = status_desc.toLowerCase();
+                            let userdirection_message = "Thank you!";
+
+                            if (search_text.includes('pending authorisation')) {
+                                userdirection_message = "👉Please check your phone and authorize the payment to complete the transaction.";
+                            }
+                            // Construct success message
+                            successMessage =
+                                `Hello ${session.userName}!\n\n` +
+                                `${userdirection_message}\n\n`+
+                                `PRN: ${result.prn_number}\n` +
+                                `Reference: ${result.reference}\n` +
+                                `Phone: ${standardizedPhone}\n` +
+                                `Service: ${serviceType}\n` +
+                                `Amount: ${latestPRNDetails.amount} UGX \n\n` +
+                                `${result.status_description}`;
+
+
+                        }
+                    } else {
                         successMessage =
                             `Hello ${session.userName}!\n\n` +
-                            `${result.status_description}\n\n` +
-                            `PRN: ${result.prn_number}\n` +
-                            `Reference: ${result.reference}\n` +
-                            `Phone: ${standardizedPhone}\n` +
-                            `Service: ${serviceType}\n` +
-                            `Amount: UGX 500  \n\n` +
-                            `${userdirection_message}`;
-
+                            `Internal error, Please initiate again`;
                     }
-                } 
+
+                }
 
                 // Send confirmation message
                 await WhatsAppService.sendMessage(

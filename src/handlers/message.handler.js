@@ -18,6 +18,8 @@ export class MessageHandler {
       const userPhone = contact.wa_id;
       const userName = contact.profile.name;
 
+      logger.info(`[incoming] User: ${contact.wa_id} - Message: ${message.text.body}`);
+
       let session = SessionService.getSession(userPhone) ||
         SessionService.createSession(userPhone, userName);
 
@@ -552,7 +554,6 @@ export class MessageHandler {
 
 
   static async validatePhoneNumber(phoneNumber, message, session, userName, businessPhoneNumberId) {
-
     const phone_number_validator = new PhoneNumber_Validator();
     await phone_number_validator.validatePhonenumber(phoneNumber, message, session, userName, businessPhoneNumberId)
     

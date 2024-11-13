@@ -2,7 +2,7 @@ import logger from '../config/logger.js';
 import { MessageHandler } from '../handlers/message.handler.js';
 
 class MessageQueue {
-  constructor(concurrency = 3) {
+  constructor(concurrency = 20) {
     this.queue = [];
     this.processing = new Set();
     this.concurrency = concurrency;

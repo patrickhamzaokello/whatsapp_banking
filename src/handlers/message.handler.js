@@ -6,7 +6,7 @@ import { InputValidator } from '../validators/input.validator.js';
 import { Helpers } from '../utils/helpers.js';
 import { PRN_Validator } from '../validators/prns.validator.js';
 import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
-import messageQueue from '../queue/messageQueue.js';
+import messageQueue from '../queue/MessageQueue.js';
 
 export class MessageHandler {
   static CONTROL_COMMANDS = {

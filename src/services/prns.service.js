@@ -71,9 +71,6 @@ export class PrnService {
   }
 
 
-
-
-
   async parsePRNDetailsSoapResponse(xml) {
     try {
       const parsedData = await parseStringPromise(xml, { explicitArray: false });

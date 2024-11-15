@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import crypto from "crypto";
 import logger from './config/logger.js';
 import router from './routes/api.routes.js';
 import { decryptRequest, encryptResponse, FlowEndpointException } from "./flows/encryption.js";
@@ -17,7 +18,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const APP_SECRET = process.env.WEBHOOK_VERIFY_TOKEN;
+const PASSPHRASE = process.env.PASSPHRASE;
+const APP_SECRET = process.env.APP_SECRET;
 // Security and optimization middleware
 app.use(helmet()); // Security headers
 app.use(cors()); // Enable CORS
@@ -89,6 +91,7 @@ app.post("/flow", async (req, res) => {
     const screenResponse = await getNextScreen(decryptedBody);
     console.log("👉 Response to Encrypt:", screenResponse);
 
+    res.type('text/plain');
     // Encrypt and send the response
     res.send(encryptResponse(screenResponse, aesKeyBuffer, initialVectorBuffer));
   } catch (err) {

@@ -8,8 +8,8 @@
 // this object is generated from Flow Builder under "..." > Endpoint > Snippets > Responses
 // To navigate to a screen, return the corresponding response from the endpoint. Make sure the response is encrypted.
 const SCREEN_RESPONSES = {
-    SELECT_SERVICE: {
-      screen: "SELECT_SERVICE",
+    LOAN: {
+      screen: "LOAN",
       data: {
         tenure: [
           {
@@ -46,8 +46,8 @@ const SCREEN_RESPONSES = {
         selected_tenure: "months48",
       },
     },
-    SERVICE_DETAILS: {
-      screen: "SERVICE_DETAILS",
+    DETAILS: {
+      screen: "DETAILS",
       data: {
         is_upi: false,
         is_account: false,
@@ -85,8 +85,8 @@ const SCREEN_RESPONSES = {
   };
   
   
-  // Example SELECT_SERVICE repayments for the amounts listed above
-  const SELECT_SERVICE_OPTIONS = {
+  // Example loan repayments for the amounts listed above
+  const LOAN_OPTIONS = {
     amount1: {
       months12: "₹ 63,000",
       months24: "₹ 33,000",
@@ -122,29 +122,29 @@ const SCREEN_RESPONSES = {
       };
     }
   
-    // handle initial request when opening the flow and display SELECT_SERVICE screen
+    // handle initial request when opening the flow and display LOAN screen
     if (action === "INIT") {
       return {
-        ...SCREEN_RESPONSES.SELECT_SERVICE,
+        ...SCREEN_RESPONSES.LOAN,
       };
     }
   
     if (action === "data_exchange") {
       // handle the request based on the current screen
       switch (screen) {
-        // handles when user interacts with SELECT_SERVICE screen
-        case "SELECT_SERVICE":
+        // handles when user interacts with LOAN screen
+        case "LOAN":
           // Handles user clicking on Continue to navigate to next screen
           if (data.emi != null) {
             return {
-              ...SCREEN_RESPONSES.SERVICE_DETAILS,
+              ...SCREEN_RESPONSES.DETAILS,
               data: {
                 // copy initial screen data then override specific fields
-                ...SCREEN_RESPONSES.SERVICE_DETAILS.data,
-                amount: SCREEN_RESPONSES.SELECT_SERVICE.data.amount
+                ...SCREEN_RESPONSES.DETAILS.data,
+                amount: SCREEN_RESPONSES.LOAN.data.amount
                   .filter((a) => a.id === data.amount)
                   .map((a) => a.title)[0],
-                tenure: SCREEN_RESPONSES.SELECT_SERVICE.data.tenure
+                tenure: SCREEN_RESPONSES.LOAN.data.tenure
                   .filter((t) => t.id === data.tenure)
                   .map((t) => t.title)[0],
                 emi: data.emi,
@@ -153,18 +153,18 @@ const SCREEN_RESPONSES = {
           }
           // otherwise refresh quote based on user selection
           return {
-            ...SCREEN_RESPONSES.SELECT_SERVICE,
+            ...SCREEN_RESPONSES.LOAN,
             data: {
               selected_amount: data.amount,
               selected_tenure: data.tenure,
-              emi: SELECT_SERVICE_OPTIONS[data.amount][data.tenure],
+              emi: LOAN_OPTIONS[data.amount][data.tenure],
             },
           };
-        case "SERVICE_DETAILS":
+        case "DETAILS":
           // Handles user selecting UPI or Banking selector
           if (data.payment_mode != null) {
             return {
-              ...SCREEN_RESPONSES.SERVICE_DETAILS,
+              ...SCREEN_RESPONSES.DETAILS,
               data: {
                 is_upi: data.payment_mode == "UPI",
                 is_account: data.payment_mode == "Bank",
@@ -190,7 +190,7 @@ const SCREEN_RESPONSES = {
   
         // handles when user completes SUMMARY screen
         case "SUMMARY":
-          // TODO: save SELECT_SERVICE to your database and send money to user account
+          // TODO: save loan to your database and send money to user account
           // send success response to complete and close the flow
           return {
             ...SCREEN_RESPONSES.COMPLETE,

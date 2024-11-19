@@ -1,12 +1,5 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
+import { PRN_Validator } from "../validators/prns.validator.js";
 
-// this object is generated from Flow Builder under "..." > Endpoint > Snippets > Responses
-// To navigate to a screen, return the corresponding response from the endpoint. Make sure the response is encrypted.
 const SCREEN_RESPONSES = {
   SELECT_SERVICE: {
     screen: "SELECT_SERVICE",
@@ -132,6 +125,14 @@ const SCREEN_RESPONSES = {
   SERVICE_DETAILS: {
     screen: "SERVICE_DETAILS",
     data: {
+      is_prn: false,
+      is_nwsc: false,
+      is_yaka: false,
+      is_tv: false,
+      s_service_message: "message",
+      s_can_proceed: false,
+      s_service_status: "status",
+      s_selected_service_id: "service_id",
       s_selected_bank_service: "s_selected_bank_service",
       s_prn_number: "s_prn_number",
       s_nwsc_meter_no: "s_nwsc_meter_no",
@@ -147,6 +148,8 @@ const SCREEN_RESPONSES = {
     data: {
       is_mobile: false,
       is_account: false,
+      selected_payment_method: "select method",
+      s_service_message: "message",
       emi: "\u20b9 20,000",
       tenure: "12 months",
       amount: "\u20b9 500",
@@ -155,12 +158,8 @@ const SCREEN_RESPONSES = {
   SUMMARY: {
     screen: "SUMMARY",
     data: {
-      amount: "\u20b9 7,20,000",
-      tenure: "12 months",
-      rate: "9% pa",
-      emi: "\u20b9 3500",
-      fee: "\u20b9 500",
-      payment_mode: "Transfer to account xxxx2342",
+      s_service_message: "message",
+      selected_payment_mode: "mobile",
     },
   },
   COMPLETE: {
@@ -274,17 +273,29 @@ export const getNextScreen = async (decryptedBody) => {
 
           // if service is prn
           if (data.s_selected_bank_service == "pay_prn") {
+
+            //format the prn and remove extra spaces
+            const formattedPRN = data.s_prn_number.replace(/\s/g, '');
+
+            //validate prn number
+            const prnChecker = new PRN_Validator();
+            const { prn_message, status } = await prnChecker.checkPRNStatus(formattedPRN);
+
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                // copy initial screen data then override specific fields
-                ...SCREEN_RESPONSES.SERVICE_DETAILS.data,
+                is_prn: data.s_selected_bank_service == "pay_prn",
+                is_nwsc: data.s_selected_bank_service == "pay_nwsc",
+                is_yaka: data.s_selected_bank_service == "pay_yaka",
+                is_tv: data.s_selected_bank_service == "pay_tv",
+                s_service_message: prn_message,
+                s_can_proceed: status == "available",
+                s_service_status: status,
+                s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((s) => s.id === data.s_selected_bank_service)
                   .map((s) => s.title)[0],
                 s_prn_number: data.s_prn_number
-                  .filter((a) => a.id === data.s_prn_number)
-                  .map((a) => a.title)[0]
               },
 
             };
@@ -294,12 +305,18 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                // copy initial screen data then override specific fields
-                ...SCREEN_RESPONSES.SERVICE_DETAILS.data,
+                is_prn: data.s_selected_bank_service == "pay_prn",
+                is_nwsc: data.s_selected_bank_service == "pay_nwsc",
+                is_yaka: data.s_selected_bank_service == "pay_yaka",
+                is_tv: data.s_selected_bank_service == "pay_tv",
+                s_service_message: "Pay National Water and Sewerage Corporation (NWSC) bill",
+                s_can_proceed: false,
+                s_service_status: "status",
+                s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
-                s_nwsc_area_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.nwsc_area_selected
+                s_nwsc_area_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.nwsc_area
                   .filter((a) => a.id === data.s_nwsc_area_selected)
                   .map((a) => a.title)[0],
                 s_nwsc_meter_no: data.s_nwsc_meter_no
@@ -312,14 +329,20 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                // copy initial screen data then override specific fields
-                ...SCREEN_RESPONSES.SERVICE_DETAILS.data,
+                is_prn: data.s_selected_bank_service == "pay_prn",
+                is_nwsc: data.s_selected_bank_service == "pay_nwsc",
+                is_yaka: data.s_selected_bank_service == "pay_yaka",
+                is_tv: data.s_selected_bank_service == "pay_tv",
+                s_service_message: "Pay Umeme / Yaka Power bill",
+                s_can_proceed: false,
+                s_service_status: "status",
+                s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
                 s_umeme_meter_type: SCREEN_RESPONSES.SELECT_SERVICE.data.umeme_meter_type
                   .filter((t) => t.id === data.s_umeme_meter_type)
-                  .map((t) => t.title)[0],               
+                  .map((t) => t.title)[0],
                 s_umeme_meter_no: data.s_umeme_meter_no,
               },
 
@@ -329,16 +352,22 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                // copy initial screen data then override specific fields
-                ...SCREEN_RESPONSES.SERVICE_DETAILS.data,
-                s_tv_provider_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.tv_providers
-                  .filter((t) => t.id === data.s_tv_provider_selected)
-                  .map((t) => t.title)[0],
+                is_prn: data.s_selected_bank_service == "pay_prn",
+                is_nwsc: data.s_selected_bank_service == "pay_nwsc",
+                is_yaka: data.s_selected_bank_service == "pay_yaka",
+                is_tv: data.s_selected_bank_service == "pay_tv",
+                s_service_message: "Pay TV bill",
+                s_can_proceed: false,
+                s_service_status: "status",
+                s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
+                s_tv_provider_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.tv_providers
+                  .filter((t) => t.id === data.s_tv_provider_selected)
+                  .map((t) => t.title)[0],
                 s_tv_card_no: data.s_tv_card_no,
-               
+
               },
 
             };
@@ -357,34 +386,35 @@ export const getNextScreen = async (decryptedBody) => {
       case "SERVICE_DETAILS":
         return {
           ...SCREEN_RESPONSES.PAYMENT_METHOD,
-          data: {},
+          data: {
+            is_mobile: false,
+            is_account: false,
+            s_service_message: data.s_service_message,
+            selected_payment_method: "select payment method"
+          },
         };
 
       case "PAYMENT_METHOD":
         // Handles user selecting UPI or Banking selector
         if (data.payment_mode != null) {
           return {
-            ...SCREEN_RESPONSES.SERVICE_DETAILS,
+            ...SCREEN_RESPONSES.PAYMENT_METHOD,
             data: {
-              is_upi: data.payment_mode == "UPI",
-              is_account: data.payment_mode == "Bank",
+              is_mobile: data.payment_mode == "mobile",
+              is_account: data.payment_mode == "account",
+              selected_payment_method: data.payment_mode
             },
           };
-        }
-        // Handles user clicking on Continue
-        const payment_string =
-          data.upi_id != null
-            ? "Upi xxxx" + data.upi_id.slice(-4)
-            : "account xxxx" + data.account_number.slice(-4);
+        }        
+
+        // Handles user clicking on Continue       
         return {
           ...SCREEN_RESPONSES.SUMMARY,
           data: {
-            // copy initial screen data then override specific fields
-            ...SCREEN_RESPONSES.SUMMARY.data,
-            amount: data.amount,
-            tenure: data.tenure,
-            emi: data.emi,
-            payment_mode: "Transfer to " + payment_string,
+            s_message: "You are about to pay",
+            s_prn: "prns",
+            selected_payment_mode: data.selected_payment_mode,
+            s_service_message: data.s_service_message
           },
         };
 

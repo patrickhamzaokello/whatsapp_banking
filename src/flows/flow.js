@@ -149,17 +149,29 @@ const SCREEN_RESPONSES = {
       is_mobile: false,
       is_account: false,
       selected_payment_method: "select method",
+      is_prn: false,
+      is_nwsc: false,
+      is_yaka: false,
+      is_tv: false,
       s_service_message: "message",
-      emi: "\u20b9 20,000",
-      tenure: "12 months",
-      amount: "\u20b9 500",
+      s_can_proceed: false,
+      s_service_status: "status",
+      s_selected_service_id: "service_id",
+      s_selected_bank_service: "s_selected_bank_service",
+      s_prn_number: "s_prn_number",
+      s_nwsc_meter_no: "s_nwsc_meter_no",
+      s_nwsc_area_selected: "s_nwsc_area_selected",
+      s_umeme_meter_type: "s_umeme_meter_type",
+      s_umeme_meter_no: "s_umeme_meter_no",
+      s_tv_provider_selected: "s_tv_provider_selected",
+      s_tv_card_no: "s_tv_card_no"
     },
   },
   SUMMARY: {
     screen: "SUMMARY",
     data: {
       s_service_message: "message",
-      selected_payment_mode: "mobile",
+      selected_payment_method: "mobile",
     },
   },
   COMPLETE: {
@@ -384,15 +396,105 @@ export const getNextScreen = async (decryptedBody) => {
           },
         };
       case "SERVICE_DETAILS":
-        return {
-          ...SCREEN_RESPONSES.PAYMENT_METHOD,
-          data: {
-            is_mobile: false,
-            is_account: false,
-            s_service_message: data.s_service_message,
-            selected_payment_method: "select payment method"
-          },
-        };
+
+        if (data.s_selected_service_id != null) {
+          if (data.s_selected_service_id == "pay_prn") {
+
+            return {
+              ...SCREEN_RESPONSES.PAYMENT_METHOD,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_service_id,
+                s_prn_number: data.s_prn_number,
+
+                is_mobile: false,
+                is_account: false,
+                s_selected_bank_service: data.s_selected_service_id,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method"
+              },
+
+            };
+          }
+          // if service is nwsc
+          if (data.s_selected_service_id == "pay_nwsc") {
+            return {
+              ...SCREEN_RESPONSES.PAYMENT_METHOD,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_service_id,
+                s_nwsc_area_selected: data.s_nwsc_area_selected,
+                s_nwsc_meter_no: data.s_nwsc_meter_no,
+
+                is_mobile: false,
+                is_account: false,
+                s_selected_bank_service: data.s_selected_service_id,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method"
+              },
+
+            };
+          }
+          // if service is pay yaka
+          if (data.s_selected_service_id == "pay_yaka") {
+            return {
+              ...SCREEN_RESPONSES.PAYMENT_METHOD,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_service_id,
+                s_umeme_meter_type: data.s_umeme_meter_type,
+                s_umeme_meter_no: data.s_umeme_meter_no,
+
+                is_mobile: false,
+                is_account: false,
+                s_selected_bank_service: data.s_selected_service_id,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method"
+              },
+
+            };
+          }
+
+          if (data.s_selected_bank_service == "pay_tv") {
+            return {
+              ...SCREEN_RESPONSES.PAYMENT_METHOD,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_service_id,
+                s_tv_provider_selected: data.s_tv_provider_selected,
+                s_tv_card_no: data.s_tv_card_no,
+
+                is_mobile: false,
+                is_account: false,
+                s_selected_bank_service: data.s_selected_service_id,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method"
+
+              },
+
+            };
+          }
+        }
 
       case "PAYMENT_METHOD":
         // Handles user selecting UPI or Banking selector
@@ -405,18 +507,127 @@ export const getNextScreen = async (decryptedBody) => {
               selected_payment_method: data.payment_mode
             },
           };
-        }        
+        }
 
         // Handles user clicking on Continue       
-        return {
-          ...SCREEN_RESPONSES.SUMMARY,
-          data: {
-            s_message: "You are about to pay",
-            s_prn: "prns",
-            selected_payment_mode: data.selected_payment_mode,
-            s_service_message: data.s_service_message
-          },
-        };
+        if (data.selected_payment_method != null) {
+          if (data.s_selected_bank_service == "pay_prn") {
+
+            return {
+              ...SCREEN_RESPONSES.SUMMARY,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_bank_service,
+                s_prn_number: data.s_prn_number,
+
+                is_mobile: data.is_mobile,
+                is_account: data.is_account,
+                s_selected_bank_service: data.s_selected_bank_service,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method",
+
+                selected_payment_method: data.selected_payment_method,
+                s_service_message: data.s_service_message,
+                phone_number: data.phone_number,
+                email_address: data.email_address,
+              },
+
+            };
+          }
+          // if service is nwsc
+          if (data.s_selected_bank_service == "pay_nwsc") {
+            return {
+              ...SCREEN_RESPONSES.SUMMARY,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_bank_service,
+                s_nwsc_area_selected: data.s_nwsc_area_selected,
+                s_nwsc_meter_no: data.s_nwsc_meter_no,
+
+                is_mobile: data.is_mobile,
+                is_account: data.is_account,
+                s_selected_bank_service: data.s_selected_bank_service,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method",
+
+                selected_payment_method: data.selected_payment_method,
+                s_service_message: data.s_service_message,
+                phone_number: data.phone_number,
+                email_address: data.email_address,
+              },
+
+            };
+          }
+          // if service is pay yaka
+          if (data.s_selected_bank_service == "pay_yaka") {
+            return {
+              ...SCREEN_RESPONSES.SUMMARY,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_bank_service,
+                s_umeme_meter_type: data.s_umeme_meter_type,
+                s_umeme_meter_no: data.s_umeme_meter_no,
+
+                is_mobile: data.is_mobile,
+                is_account: data.is_account,
+                s_selected_bank_service: data.s_selected_bank_service,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method",
+
+                selected_payment_method: data.selected_payment_method,
+                s_service_message: data.s_service_message,
+                phone_number: data.phone_number,
+                email_address: data.email_address,
+              },
+
+            };
+          }
+
+          if (data.s_selected_bank_service == "pay_tv") {
+            return {
+              ...SCREEN_RESPONSES.SUMMARY,
+              data: {
+                is_prn: data.is_prn,
+                is_nwsc: data.is_nwsc,
+                is_yaka: data.is_yaka,
+                is_tv: data.is_tv,
+                s_can_proceed: data.s_can_proceed,
+                s_service_status: data.s_service_status,
+                s_selected_service_id: data.s_selected_bank_service,
+                s_tv_provider_selected: data.s_tv_provider_selected,
+                s_tv_card_no: data.s_tv_card_no,
+
+                is_mobile: data.is_mobile,
+                is_account: data.is_account,
+                s_selected_bank_service: data.s_selected_bank_service,
+                s_service_message: data.s_service_message,
+                selected_payment_method: "select payment method",
+
+                selected_payment_method: data.selected_payment_method,
+                s_service_message: data.s_service_message,
+                phone_number: data.phone_number,
+                email_address: data.email_address,
+
+              },
+
+            };
+          }
+        }
 
       // handles when user completes SUMMARY screen
       case "SUMMARY":

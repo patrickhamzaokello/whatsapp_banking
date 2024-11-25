@@ -184,28 +184,9 @@ const SCREEN_RESPONSES = {
     data: {
       extension_message_response: {
         params: {
-          flow_token: "REPLACE_FLOW_TOKEN",
-          some_param_name: "PASS_CUSTOM_VALUE",
         },
       },
     },
-  },
-};
-
-
-// Example SELECT_SERVICE repayments for the amounts listed above
-const SELECT_SERVICE_OPTIONS = {
-  amount1: {
-    months12: "₹ 63,000",
-    months24: "₹ 33,000",
-    months36: "₹ 23,000",
-    months48: "₹ 18,000",
-  },
-  amount2: {
-    months12: "₹ 28,000",
-    months24: "₹ 14,600",
-    months36: "₹ 10,000",
-    months48: "₹ 8,000",
   },
 };
 
@@ -390,11 +371,6 @@ export const getNextScreen = async (decryptedBody) => {
         // otherwise refresh quote based on user selection
         return {
           ...SCREEN_RESPONSES.SELECT_SERVICE,
-          data: {
-            selected_amount: data.amount,
-            selected_tenure: data.tenure,
-            emi: SELECT_SERVICE_OPTIONS[data.amount][data.tenure],
-          },
         };
       case "SERVICE_DETAILS":
 

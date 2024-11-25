@@ -8,6 +8,8 @@ import { PRN_Validator } from '../validators/prns.validator.js';
 import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
 import messageQueue from '../queue/MessageQueue.js';
 import { logIncomingMessage } from '../config/message-logger.js';
+import { FlowService } from '../services/flow.service.js';
+
 
 export class MessageHandler {
   static CONTROL_COMMANDS = {
@@ -64,7 +66,8 @@ export class MessageHandler {
         case 'PAY_WATER':
         case 'PAY_UMEME':
         case 'PAY_PRN':
-          await this.startServiceFlow(intent, message, session, businessPhoneNumberId);
+          // await this.startServiceFlow(intent, message, session, businessPhoneNumberId);
+          await this.sendFlowMessage("442394835264933", message, businessPhoneNumberId);
           break;
         case 'CONFIRM':
           await this.handleConfirmation(message, session, businessPhoneNumberId);
@@ -225,7 +228,7 @@ export class MessageHandler {
     const currentStep = session.state.flowNextState;
     const canChangePayment = this.PAYMENT_METHOD_STATES.includes(currentStep);
 
-    const helpMessage = 
+    const helpMessage =
       `Available commands:\n\n` +
       `• Type "cancel" to cancel the current transaction\n` +
       `• Type "back" to go to the previous step\n` +
@@ -407,6 +410,22 @@ export class MessageHandler {
     }
   }
 
+  static async sendFlowMessage(flow_id, message, businessPhoneNumberId) {
+    try {
+      const recipientPhoneNumber = message.from;
+      await FlowService.sendFlow(flow_id, recipientPhoneNumber, businessPhoneNumberId);
+    } catch (error) {
+      console.log(error)
+      // Send payment options message
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        "Sorry, there was an error processing your request. Please try again later.",
+        message.id
+      );
+    }
+  }
+
   static startServiceFlow(intent, message, session, businessPhoneNumberId) {
     const service = intent.split('_')[1].toLowerCase();
     session.state.currentService = service;
@@ -447,25 +466,25 @@ export class MessageHandler {
         { type: 'Mobile', emoji: '📱', description: 'MTM/Airtel payment' }
       ];
 
-      
+
       // Show different message if changing payment method
       const isChanging = session.state.flowCompletedStates?.includes('requestPaymentMethod');
-      
+
       const paymentMessage = isChanging ?
-      `Please select your new payment method:\n\n` :
-      `Please choose your preferred payment method:\n\n`;
+        `Please select your new payment method:\n\n` :
+        `Please choose your preferred payment method:\n\n`;
 
 
-      const fullMessage = 
-      `${paymentMessage}` +
-      paymentOptions.map(option =>
-        `*${option.type}* ${option.emoji}\n` +
-        `└ ${option.description}`
-      ).join('\n\n') +
-      '\n\nReply with either *Card* or *Mobile* to proceed.\n\n' +
-      `Available commands:\n` +
-      `• Type "cancel" to cancel transaction\n` +
-      `• Type "help" for more options`;
+      const fullMessage =
+        `${paymentMessage}` +
+        paymentOptions.map(option =>
+          `*${option.type}* ${option.emoji}\n` +
+          `└ ${option.description}`
+        ).join('\n\n') +
+        '\n\nReply with either *Card* or *Mobile* to proceed.\n\n' +
+        `Available commands:\n` +
+        `• Type "cancel" to cancel transaction\n` +
+        `• Type "help" for more options`;
 
       // Send payment options message
       await WhatsAppService.sendMessage(
@@ -518,7 +537,7 @@ export class MessageHandler {
         // Store the payment method in session
         session.state.paymentMethod = choice;
 
-        
+
         // Send confirmation message
         await WhatsAppService.sendMessage(
           businessPhoneNumberId,
@@ -942,25 +961,41 @@ export class MessageHandler {
    * @param {string} businessPhoneNumberId - The business phone number ID
    */
   static async showServices(message, session, businessPhoneNumberId) {
-    const servicesMessage =
-      `Hello ${session.userName}, \n\n` +
-      `Pay TV Subscription (GOTV & DSTV)\n` +
-      `Pay Water Bill (NWSC)\n` +
-      `Pay Electricity Bill (UMEME/YAKA)\n` +
-      `Pay URA Reference Number (PRN)\n\n` +
-      `👉 *To proceed, reply with  "Pay TV," "Pay Water," "Pay Yaka," or "Pay PRN.*"\n\n` +
-      `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved.\n\n\n` +
-      `For more info, reply with text below:\n` +
-      `📞 (Contact) \n` +
-      `🌐 (About) \n` +
-      `🧩 (FAQ) \n\n`;
+    // const servicesMessage =
+    //   `Hello ${session.userName}, \n\n` +
+    //   `Pay TV Subscription (GOTV & DSTV)\n` +
+    //   `Pay Water Bill (NWSC)\n` +
+    //   `Pay Electricity Bill (UMEME/YAKA)\n` +
+    //   `Pay URA Reference Number (PRN)\n\n` +
+    //   `👉 *To proceed, reply with  "Pay TV," "Pay Water," "Pay Yaka," or "Pay PRN.*"\n\n` +
+    //   `© 2024 Guaranty Trust Bank, Uganda. All Rights Reserved.\n\n\n` +
+    //   `For more info, reply with text below:\n` +
+    //   `📞 (Contact) \n` +
+    //   `🌐 (About) \n` +
+    //   `🧩 (FAQ) \n\n`;
 
-    await WhatsAppService.sendMessage(
-      businessPhoneNumberId,
-      message.from,
-      servicesMessage,
-      message.id
-    );
+    // await WhatsAppService.sendMessage(
+    //   businessPhoneNumberId,
+    //   message.from,
+    //   servicesMessage,
+    //   message.id
+    // );
+
+    try {
+      const username = session.userName
+      const message_body = "Welcome to Gtbank Uganda, use the buttons below to proceed"
+      await FlowService.sendInteractiveMessage(username,message_body, message.from, businessPhoneNumberId)
+    } catch (error) {
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        "Error sending interactive message",
+        message.id
+      );
+      logger.error('Error sending interactive message', { error, sessionId: session.id });
+      throw error;
+    }
+
   }
 
   static async showAssistantInfo(message, session, businessPhoneNumberId) {

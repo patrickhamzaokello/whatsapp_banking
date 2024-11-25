@@ -5,16 +5,11 @@ import { MessageHandler } from '../handlers/message.handler.js';
 import { URLSHORTNER } from '../services/url_shortner.service.js';
 import { PrnService } from '../services/prns.service.js';
 import { FlowService } from '../services/flow.service.js';
-import { WhatsAppService } from '../services/whatsapp.service.js';
+
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
   try {
-
-
-    // if (message?.type === "text") {
-    //   await MessageHandler.handleIncomingWithQueue(message, contact, businessPhoneNumberId);
-    // }
     const data = req.body;
 
     // Check if "messages" exist in the payload
@@ -28,14 +23,17 @@ router.post("/webhook", async (req, res) => {
       const message_id = messages[0]?.id;
 
       if (textPayload) {
-        // Extract user's phone number
-        // await FlowService.sendFlow("442394835264933", contact, businessPhoneNumberId);
-        // await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message_id);
-
         await MessageHandler.handleIncomingWithQueue(messages[0], contact, businessPhoneNumberId);
       } else {
-        // Process the reply if no text payload
-        await FlowService.flow_reply_processor(businessPhoneNumberId, req, message_id);
+        if (messages[0]?.interactive?.button_reply) {
+
+          const button_id = messages[0]?.interactive?.button_reply?.id
+          if(button_id == "payService"){
+            FlowService.sendFlow("442394835264933",contact.wa_id, businessPhoneNumberId, contact.wa_id)
+          }
+        } else if (messages[0]?.interactive?.nfm_reply) {
+          await FlowService.flow_reply_processor(businessPhoneNumberId, req, message_id);
+        }
       }
     }
 

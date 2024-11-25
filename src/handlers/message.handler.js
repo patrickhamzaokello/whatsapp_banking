@@ -7,6 +7,7 @@ import { Helpers } from '../utils/helpers.js';
 import { PRN_Validator } from '../validators/prns.validator.js';
 import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
 import messageQueue from '../queue/MessageQueue.js';
+import { logIncomingMessage } from '../config/message-logger.js';
 
 export class MessageHandler {
   static CONTROL_COMMANDS = {
@@ -34,7 +35,7 @@ export class MessageHandler {
       const userName = contact.profile.name;
       const messageText = message.text.body.toLowerCase();
 
-      logger.info(`[incoming] User: ${contact.wa_id} - Message: ${message.text.body}`);
+      logIncomingMessage(contact.wa_id, message.text.body)
 
       let session = SessionService.getSession(userPhone) ||
         SessionService.createSession(userPhone, userName);

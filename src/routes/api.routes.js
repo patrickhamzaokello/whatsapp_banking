@@ -4,16 +4,39 @@ import { config } from '../config/environment.js';
 import { MessageHandler } from '../handlers/message.handler.js';
 import { URLSHORTNER } from '../services/url_shortner.service.js';
 import { PrnService } from '../services/prns.service.js';
+import { FlowService } from '../services/flow.service.js';
+import { WhatsAppService } from '../services/whatsapp.service.js';
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
   try {
-    const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
+
+
+    // if (message?.type === "text") {
+    //   await MessageHandler.handleIncomingWithQueue(message, contact, businessPhoneNumberId);
+    // }
+    const data = req.body;
+
+    // Check if "messages" exist in the payload
     const contact = req.body.entry?.[0]?.changes[0]?.value?.contacts?.[0];
     const businessPhoneNumberId = req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
+    const messages = data?.entry?.[0]?.changes?.[0]?.value?.messages;
 
-    if (message?.type === "text") {
-      await MessageHandler.handleIncomingWithQueue(message, contact, businessPhoneNumberId);
+    if (messages && messages.length > 0) {
+      // Check if the first message has a text payload
+      const textPayload = messages[0]?.text;
+      const message_id = messages[0]?.id;
+
+      if (textPayload) {
+        // Extract user's phone number
+        // await FlowService.sendFlow("442394835264933", contact, businessPhoneNumberId);
+        // await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message_id);
+
+        await MessageHandler.handleIncomingWithQueue(messages[0], contact, businessPhoneNumberId);
+      } else {
+        // Process the reply if no text payload
+        await FlowService.flow_reply_processor(businessPhoneNumberId, req, message_id);
+      }
     }
 
     res.sendStatus(200);
@@ -31,10 +54,8 @@ router.get("/webhook", (req, res) => {
 
   if (mode === "subscribe" && token === config.webhook.verifyToken) {
     res.status(200).send(challenge);
-    logger.info('Webhook verified successfully');
   } else {
     res.sendStatus(403);
-    logger.warn('Webhook verification failed');
   }
 });
 
@@ -67,7 +88,7 @@ router.post('/validate-prn', async (req, res) => {
 
 router.post('/complete-prn', async (req, res) => {
   const prnService = new PrnService();
-  const { prn,phone_number } = req.body;
+  const { prn, phone_number } = req.body;
   if (!prn) {
     return res.status(400).json({ error: 'PRN is required' });
   }
@@ -76,7 +97,7 @@ router.post('/complete-prn', async (req, res) => {
   }
 
   try {
-    const result = await prnService.universialPRNCompleteTransaction(prn,phone_number);
+    const result = await prnService.universialPRNCompleteTransaction(prn, phone_number);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });

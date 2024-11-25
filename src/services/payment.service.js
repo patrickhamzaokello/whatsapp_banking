@@ -58,7 +58,6 @@ export class PaymentService {
         `gtp_SecureHashType=${gtp_SecureHashType}&` +
         `gtp_EmailAddress=${emailAddress}`;
 
-      logger.info('Payment link generated', { orderId, payerName, service: paymentDetails.service });
 
       //shorten the url and return
       const shortCode = URLSHORTNER.generateShortCode();

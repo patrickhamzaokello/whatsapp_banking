@@ -6,7 +6,6 @@ export class SessionService {
   static createSession(phoneNumber, userName) {
     const session = new Session(phoneNumber, userName);
     this.sessions.set(phoneNumber, session);
-    logger.info('Session created', { phoneNumber, userName });
     return session;
   }
 
@@ -20,7 +19,6 @@ export class SessionService {
       clearTimeout(session.timeout);
     }
     this.sessions.delete(phoneNumber);
-    logger.info('Session removed', { phoneNumber });
   }
 
 }

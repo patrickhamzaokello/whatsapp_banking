@@ -1,4 +1,5 @@
 import logger from '../config/logger.js';
+import { logOutgoingMessage } from '../config/message-logger.js';
 import axios from 'axios';
 import {config} from '../config/environment.js';
 import {WhatsAppError} from '../errors/custom-errors.js';
@@ -24,8 +25,7 @@ export class WhatsAppService {
           },
           data
         });
-        logger.info(`[response] User: ${to} - Message: ${message}`);
-        logger.info('Message sent successfully', { to, messageId });
+        logOutgoingMessage(to, message);
         return response.data;
   
       } catch (error) {
@@ -49,7 +49,6 @@ export class WhatsAppService {
           }
         });
   
-        logger.info('Message marked as read', { messageId });
   
       } catch (error) {
         logger.error('Error marking message as read', { error, messageId });

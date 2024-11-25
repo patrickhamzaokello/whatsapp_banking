@@ -115,5 +115,15 @@ export class PRN_Validator {
       session.attempts.prn = 0;
       session.resetState()
     }
+
+    else {
+      await WhatsAppService.sendMessage(
+        businessPhoneNumberId,
+        message.from,
+        `Unable to validate PRN, Try again`
+      );
+      session.attempts.prn = 0; // Reset attempts after exceeding the limit
+      session.resetState()
+    }
   }
 }

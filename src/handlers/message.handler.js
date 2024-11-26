@@ -38,20 +38,29 @@ export class MessageHandler {
       const messageText = message.text.body.toLowerCase();
 
       logIncomingMessage(contact.wa_id, message.text.body)
+      //contact is in the list of allowed contacts
+      const allowed_contacts = ["+256783604580", "+256787250196"]
+      if (allowed_contacts.includes(contact.wa_id)) {
+        let session = SessionService.getSession(userPhone) ||
+          SessionService.createSession(userPhone, userName);
 
-      let session = SessionService.getSession(userPhone) ||
-        SessionService.createSession(userPhone, userName);
+        session.resetTimeout();
+        await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message.id);
 
-      session.resetTimeout();
-      await WhatsAppService.markMessageAsRead(businessPhoneNumberId, message.id);
+        // check for control commands first
+        if (await this.handleControlCommands(messageText, message, session, businessPhoneNumberId)) {
+          return; // Control command was handled, exit
+        }
 
-      // check for control commands first
-      if (await this.handleControlCommands(messageText, message, session, businessPhoneNumberId)) {
-        return; // Control command was handled, exit
+        const intent = this.determineIntent(message.text.body);
+        await this.processIntent(intent, message, session, businessPhoneNumberId);
+      } else {
+        await WhatsAppService.sendMessage(
+          businessPhoneNumberId,
+          userPhone,
+          'Sorry, you are not allowed to use this service. Please contact the administrator.'
+        );
       }
-
-      const intent = this.determineIntent(message.text.body);
-      await this.processIntent(intent, message, session, businessPhoneNumberId);
 
     } catch (error) {
       logger.error('Error handling incoming message', { error, message });
@@ -984,7 +993,7 @@ export class MessageHandler {
     try {
       const username = session.userName
       const message_body = "Welcome to Gtbank Uganda, use the buttons below to proceed"
-      await FlowService.sendInteractiveMessage(username,message_body, message.from, businessPhoneNumberId)
+      await FlowService.sendInteractiveMessage(username, message_body, message.from, businessPhoneNumberId)
     } catch (error) {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,

@@ -10,7 +10,6 @@ export class FlowService {
     static async flow_reply_processor(businessPhoneNumberId, req, message_id) {
         const flowResponse = req.body.entry[0].changes[0].value.messages[0].interactive.nfm_reply.response_json;
         const flowData = JSON.parse(flowResponse);
-
         const {
             is_prn,
             is_nwsc,
@@ -18,15 +17,24 @@ export class FlowService {
             is_yaka,
             s_selected_service_id,
             is_mobile,
+            s_amount,
             is_account,
+            s_prn_number,
+            s_nwsc_meter_no,
+            s_nwsc_area_selected,
+            s_umeme_meter_type,
+            s_umeme_meter_no,
+            s_tv_provider_selected,
+            s_tv_card_no,
             s_selected_bank_service,
             s_service_message,
             selected_payment_method,
             phone_number,
+            email_address,
             flow_token
         } = flowData
 
-        const reply = `Summary:\n\n*Service:* ${s_service_message} \n*Payment Method:* ${selected_payment_method} \n*Phone Number:* ${phone_number}`.trim();
+        const reply = `Summary:\n\n*Service:* ${s_service_message} \n*Payment Method:* ${selected_payment_method} \n*Phone Number:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
 
         // Get the user phone number
         const userPhoneNumber = req.body.entry[0].changes[0].value.contacts[0].wa_id;
@@ -208,13 +216,15 @@ export class FlowService {
     }
 
 
-    static async sendInteractiveMessage(userName,body_message, recipientPhoneNumber, phoneNumberId) {
+    static async sendInteractiveMessage(body_message, recipientPhoneNumber, phoneNumberId) {
 
         const flowPayload = {
             type: "button",
             header: {
-                type: "text",
-                text: `Hello ${userName}`
+                type: "image",
+                image: {
+                    id: "600158732435400"
+                }
             },
             body: {
                 text: body_message
@@ -228,14 +238,14 @@ export class FlowService {
                         "type": "reply",
                         "reply": {
                             "id": "payService",
-                            "title": "Pay Utilities"
+                            "title": "Pay Bills"
                         }
                     },
                     {
                         "type": "reply",
                         "reply": {
                             "id": "otherOption",
-                            "title": "Other Options"
+                            "title": "More"
                         }
                     }
                 ]

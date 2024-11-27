@@ -11,9 +11,14 @@ import { decryptRequest, encryptResponse, FlowEndpointException } from "./flows/
 import { getNextScreen } from "./flows/flow.js";
 import { errorHandler } from './middleware/error.middleware.js';
 import { URLSHORTNER } from './services/url_shortner.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +43,12 @@ app.use(morgan('combined', {
     write: message => logger.info(message.trim())
   }
 }));
+
+// Define the folder containing static files
+const staticFolderPath = path.join(__dirname, 'public');
+
+// Serve static files from the 'public' folder
+app.use(express.static(staticFolderPath));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

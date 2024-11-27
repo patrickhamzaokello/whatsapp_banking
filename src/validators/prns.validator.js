@@ -8,6 +8,7 @@ export class PRN_Validator {
     const result = await prnService.validatePRN(prn);
     let prn_message = "Something went wrong. Try again.";
     let status = "error"; // Default status
+   let prn_amount = "na";
 
     if (result.status_code === "N") {
         prn_message = `🛑 Invalid PRN ${prn}. Try again.`;
@@ -24,6 +25,7 @@ export class PRN_Validator {
             `Expiry Date: ${result.details.expiryDate}\n` +
             `Description: ${result.details.description}\n\n`;
         status = "available";
+        prn_amount = result.details.amount;
     }
 
     // PRN already paid. Enter new PRN
@@ -35,9 +37,10 @@ export class PRN_Validator {
             `Taxpayer Name: ${result.details.taxpayerName}\n` +
             `Description: ${result.details.description}\n\n`;
         status = "paid";
+        prn_amount = result.details.amount;
     }
 
-    return { prn_message, status };
+    return { prn_message, status, prn_amount };
   }
 
   async validatePrn(prn, message, session, userName, businessPhoneNumberId) {

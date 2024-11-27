@@ -39,7 +39,7 @@ export class MessageHandler {
 
       logIncomingMessage(contact.wa_id, message.text.body)
       //contact is in the list of allowed contacts
-      const allowed_contacts = ["+256783604580", "+256787250196"]
+      const allowed_contacts = ["256783604580", "256787250196"]
       if (allowed_contacts.includes(contact.wa_id)) {
         let session = SessionService.getSession(userPhone) ||
           SessionService.createSession(userPhone, userName);
@@ -993,7 +993,7 @@ export class MessageHandler {
     try {
       const username = session.userName
       const message_body = "Welcome to Gtbank Uganda, use the buttons below to proceed"
-      await FlowService.sendInteractiveMessage(username, message_body, message.from, businessPhoneNumberId)
+      await FlowService.sendInteractiveMessage(message_body, message.from, businessPhoneNumberId)
     } catch (error) {
       await WhatsAppService.sendMessage(
         businessPhoneNumberId,

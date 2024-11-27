@@ -5,7 +5,7 @@ import { MessageHandler } from '../handlers/message.handler.js';
 import { URLSHORTNER } from '../services/url_shortner.service.js';
 import { PrnService } from '../services/prns.service.js';
 import { FlowService } from '../services/flow.service.js';
-
+import { WhatsAppService } from '../services/whatsapp.service.js';
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
@@ -29,7 +29,14 @@ router.post("/webhook", async (req, res) => {
 
           const button_id = messages[0]?.interactive?.button_reply?.id
           if(button_id == "payService"){
-            FlowService.sendFlow("442394835264933",contact.wa_id, businessPhoneNumberId, contact.wa_id)
+            FlowService.sendFlow("442394835264933",contact.wa_id, businessPhoneNumberId)
+          } else{
+            await WhatsAppService.sendMessage(
+              businessPhoneNumberId,
+              contact.wa_id,
+              'This service will be available soon',
+              messages[0]?.id
+            );
           }
         } else if (messages[0]?.interactive?.nfm_reply) {
           await FlowService.flow_reply_processor(businessPhoneNumberId, req, message_id);

@@ -1,0 +1,733 @@
+{
+    "version": "5.1",
+    "data_api_version": "3.0",
+    "routing_model": {
+        "SELECT_SERVICE": [
+            "SERVICE_DETAILS"
+        ],
+        "SERVICE_DETAILS": [
+            "PAYMENT_METHOD"
+        ],
+        "PAYMENT_METHOD": []
+    },
+    "screens": [
+        {
+            "id": "SELECT_SERVICE",
+            "title": "Bills Payments",
+            "data": {
+                "is_prn": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_nwsc": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_yaka": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_tv": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "bank_service_type": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "__example__": [
+                        {
+                            "id": "pay_service",
+                            "title": "Select Service"
+                        },
+                        {
+                            "id": "pay_prn",
+                            "title": "Pay PRN (URA)"
+                        },
+                        {
+                            "id": "pay_nwsc",
+                            "title": "Pay Nwsc (Water)"
+                        },
+                        {
+                            "id": "pay_yaka",
+                            "title": "Pay Yaka / Umeme"
+                        },
+                        {
+                            "id": "pay_tv",
+                            "title": "Pay Tv subscription"
+                        }
+                    ]
+                },
+                "nwsc_area": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "__example__": [
+                        {
+                            "id": "1",
+                            "title": "Kampala"
+                        },
+                        {
+                            "id": "2",
+                            "title": "Jinja"
+                        },
+                        {
+                            "id": "3",
+                            "title": "Entebbe"
+                        },
+                        {
+                            "id": "4",
+                            "title": "Mukono"
+                        },
+                        {
+                            "id": "5",
+                            "title": "Kajjansi"
+                        },
+                        {
+                            "id": "6",
+                            "title": "Kawuku"
+                        },
+                        {
+                            "id": "7",
+                            "title": "Iganga"
+                        },
+                        {
+                            "id": "8",
+                            "title": "Lugazi"
+                        },
+                        {
+                            "id": "9",
+                            "title": "Others"
+                        }
+                    ]
+                },
+                "umeme_meter_type": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "__example__": [
+                        {
+                            "id": "select_umeme_meter",
+                            "title": "Select meter type"
+                        },
+                        {
+                            "id": "PREPAID",
+                            "title": "Yaka"
+                        },
+                        {
+                            "id": "POSTPAID",
+                            "title": "Postpaid"
+                        },
+                        {
+                            "id": "QUOTATION",
+                            "title": "New Connection / others"
+                        }
+                    ]
+                },
+                "tv_providers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "__example__": [
+                        {
+                            "id": "1",
+                            "title": "DSTV"
+                        },
+                        {
+                            "id": "2",
+                            "title": "GOTV"
+                        },
+                        {
+                            "id": "3",
+                            "title": "STAR TIMES"
+                        },
+                        {
+                            "id": "4",
+                            "title": "AZAM"
+                        },
+                        {
+                            "id": "5",
+                            "title": "ZUKU"
+                        }
+                    ]
+                },
+                "selected_bank_service": {
+                    "type": "string",
+                    "__example__": "pay_service"
+                },
+                "selected_nwsc_area": {
+                    "type": "string",
+                    "__example__": "1"
+                },
+                "selected_tv_provider": {
+                    "type": "string",
+                    "__example__": "1"
+                },
+                "selected_umeme_meter_type": {
+                    "type": "string",
+                    "__example__": "select_umeme_meter"
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "select_utilities_form",
+                        "init-values": {
+                            "bank_service_type": "${data.selected_bank_service}",
+                            "nwsc_area_selected": "${data.selected_nwsc_area}",
+                            "tv_provider_selected": "${data.selected_tv_provider}",
+                            "umeme_meter_type": "${data.selected_umeme_meter_type}"
+                        },
+                        "children": [
+                            {
+                                "type": "Image",
+                                "src": "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",
+                                "height": 108,
+                                "scale-type": "cover"
+                            },
+                            {
+                                "type": "TextSubheading",
+                                "text": "Pay Taxes and Bills Instantly!"
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "From URA (Tax) to Umeme (Electricity), NWSC (Water), and TV subscriptions, we’ve got you covered. Choose a service to begin!"
+                            },
+                           
+                            {
+                                "type": "Dropdown",
+                                "label": "Select Service",
+                                "required": true,
+                                "name": "bank_service_type",
+                                "data-source": "${data.bank_service_type}",
+                                "on-select-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "bank_service_type": "${form.bank_service_type}"
+                                    }
+                                }
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter PRN number",
+                                "visible": "${data.is_prn}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "PRN Number",
+                                "name": "prn_number",
+                                "input-type": "number",
+                                "required": "${data.is_prn}",
+                                "visible": "${data.is_prn}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Select Meter Type",
+                                "visible": "${data.is_yaka}"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "label": "Meter Type",
+                                "required": "${data.is_yaka}",
+                                "name": "umeme_meter_type",
+                                "data-source": "${data.umeme_meter_type}",
+                                "on-select-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "umeme_meter_type": "${form.umeme_meter_type}"
+                                    }
+                                },
+                                "visible": "${data.is_yaka}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter Yaka Meter Number",
+                                "visible": "${data.is_yaka}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Yaka Meter Number",
+                                "name": "yaka_number",
+                                "input-type": "number",
+                                "required": "${data.is_yaka}",
+                                "visible": "${data.is_yaka}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter NWSC Meter Number",
+                                "visible": "${data.is_nwsc}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Water Meter Number",
+                                "name": "nwsc_number",
+                                "input-type": "number",
+                                "required": "${data.is_nwsc}",
+                                "visible": "${data.is_nwsc}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Residence Area",
+                                "visible": "${data.is_nwsc}"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "label": "Select Area",
+                                "required": "${data.is_nwsc}",
+                                "name": "nwsc_area_selected",
+                                "data-source": "${data.nwsc_area}",
+                                "on-select-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "nwsc_area_selected": "${form.nwsc_area_selected}"
+                                    }
+                                },
+                                "visible": "${data.is_nwsc}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "TV Company",
+                                "visible": "${data.is_tv}"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "label": "Select Tv Company",
+                                "required": "${data.is_tv}",
+                                "name": "tv_provider_selected",
+                                "data-source": "${data.tv_providers}",
+                                "on-select-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "tv_provider_selected": "${form.tv_provider_selected}"
+                                    }
+                                },
+                                "visible": "${data.is_tv}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter Smart Card no",
+                                "visible": "${data.is_tv}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Smart card number",
+                                "name": "tv_number",
+                                "input-type": "number",
+                                "required": "${data.is_tv}",
+                                "visible": "${data.is_tv}"
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Continue",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "s_selected_bank_service": "${form.bank_service_type}",
+                                        "s_prn_number": "${form.prn_number}",
+                                        "s_nwsc_meter_no": "${form.nwsc_number}",
+                                        "s_nwsc_area_selected": "${form.nwsc_area_selected}",
+                                        "s_umeme_meter_type": "${form.umeme_meter_type}",
+                                        "s_umeme_meter_no": "${form.yaka_number}",
+                                        "s_tv_provider_selected": "${form.tv_provider_selected}",
+                                        "s_tv_card_no": "${form.tv_number}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "SERVICE_DETAILS",
+            "title": "Details",
+            "data": {
+                "is_prn": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_nwsc": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_yaka": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_tv": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_not_prn": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "s_can_proceed": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "s_error": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "s_service_status": {
+                    "type": "string",
+                    "__example__": "status"
+                },
+                "s_service_message": {
+                    "type": "string",
+                    "__example__": "Service Message"
+                },
+                "prn_amount": {
+                    "type": "string",
+                    "__example__": "na"
+                },
+                "s_amount": {
+                    "type": "number",
+                    "__example__": 0
+                },
+                "s_selected_service_id": {
+                    "type": "string",
+                    "__example__": "pay_service"
+                },
+                "s_selected_bank_service": {
+                    "type": "string",
+                    "__example__": "Pay PRN (URA)"
+                },
+                "s_prn_number": {
+                    "type": "string",
+                    "__example__": "1"
+                },
+                "s_nwsc_meter_no": {
+                    "type": "string",
+                    "__example__": "select_nwsc_no"
+                },
+                "s_nwsc_area_selected": {
+                    "type": "string",
+                    "__example__": "select_nwsc_area"
+                },
+                "s_umeme_meter_type": {
+                    "type": "string",
+                    "__example__": "umeme_meter_type"
+                },
+                "s_umeme_meter_no": {
+                    "type": "string",
+                    "__example__": "umeme_meter_no"
+                },
+                "s_tv_provider_selected": {
+                    "type": "string",
+                    "__example__": "tv_provider"
+                },
+                "s_tv_card_no": {
+                    "type": "string",
+                    "__example__": "tv_card_no"
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "flow_path",
+                        "init-values": {
+                            "is_prn": "${data.is_prn}",
+                            "is_nwsc": "${data.is_nwsc}",
+                            "is_tv": "${data.is_tv}",
+                            "is_yaka": "${data.is_yaka}",
+                            "s_can_proceed": "${data.s_can_proceed}",
+                            "s_error": "${data.s_error}",
+                            "prn_amount": "${data.prn_amount}"
+                        },
+                        "children": [
+                            {
+                                "type": "Image",
+                                "height": 30,
+                                "src": "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAABCcAAAQnAEmzTo0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAPWSURBVHgB1ZrLTxNRFMa/2xafCakaDQuMg4lG3VBj4mOhGRcmGjXWuFFciH+B8BdQdhAXwE5XwAbCqhIhxhXgRlzRtQYdE2NcSBjciIi9njOX0geddmY60xl+Scu87vB9c2/v45wBdjkCfpLVkkgghRg05OkjYieKJ/MmJNZoI0fnDdw2cvCBxg2w6D2xZ5BSpz3dcTlBJqSYh8xP467xCh7xbuC1pkOIPrgRba/CoK9hbJCZ+4bhrqhbZrUUPbkh+CEcO9QY9DWG25/7nRdxw8xJEi57EDRsZENed1IbzgxkNQ0tYhRBPPWayF7cMYZrXVHfAIvfI+aoB9EQBkJkajWpeM3CYYtX6Hh8GJhYXah20t5ANMQXsDURsy3SIrIREa+QMmN13RVUNzB7kvv3FKKGoIfKLaOEnQb4AnYbTXjUHyo9sNOA6i6ji5Tp0qZUbkCd0BF11BTGotxAjCZluwO9UAtFA6rtpxEiqdaz0A60O73c0lo00ILQxCdbWjF3eRJLV2fp7wSSidb6hYR4wlP5kiYk7iEElPgJ6EcuWfva/nbrmJOivHhSBnhREsKPtyA+1Xpu+1j/pxEYv785vUVaGUg0f9CyE5/5OOL8JkJ0KgOiuQZ8Ec8IaMqARBJNwjfxjCwYgPtJG3d32QsvMdr53FmvAZ/Fb5GAR7rbHyDddsPa5v77+vsumJu/bK8PQjwTg0fmVxa3t1nU3BX7/jso8UzBgAmXzK98sEQUsDMRpHhGrcgeJ8/QT/omXMImBK2q9SOXrf22vUdx89g1TH2fwXr+T+DiGWXgUbKNlDyEB+xMvP35Dm8ujgYqnsipqIQKm3xBA2ROP0PfKfvJbADiCTmtamDKNNF1iANW++CRypooJRjxRDw+UIxKPEqeJQUNjcjVTAQmntnI9xYNdCVN+u/daBA28ZUmYx0Hj2Nw+QUG6BMQOdwzBssjczMdq0DzphUNEY9149byePlAJmVAde0zHPxd/zfNm+UGNsGBVNeDWtPJy3GKXFs6yw3wwajXAj/9TYwVd6sx07GEKEbmmK22X9itPpkT8iki2ZQoe1MinqluwMogSsdpnqbATedvvrfysH14fcJcpMFN0NigI2yKKacfladqJzgmzfnQTdTJl8Xr3iBMEw6Sfc5WZHeNDHWv91UatElI6us35Pl6mUp3aVaedieQscJ6wWFSV9lT2dvY4S1Tb2XpQSFuX5uVGkR5NrA1yjqhsXclOGufRw/VCMdVvU0CpVygsH6WpsbjboQX8O9tFRWvT9MdO+m2PIpXM8QC10j1HEQs5+XdiEr+A7YwaGdfJQ4LAAAAAElFTkSuQmCC",
+                                "scale-type": "contain",
+                                "visible": "${data.s_can_proceed}"
+                            },
+                            {
+                                "type": "Image",
+                                "src": "iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAACXBIWXMAABCcAAAQnAEmzTo0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAH0SURBVHgB1ZmPdYIwEMavTpANmhHYoIzABjACG1An6OsE6ASOQDawnSB2At3geidB0aoUuAj53vuUP0/y47yDgwAEqBcQEgJo+orIr1Avq9buH/KOTQMamFIEGpM/yJaMPVyRU3eiT4WteoLec+kVXhj22gVIy6UBerYViTodRHmM7j3nMFR81ti/yKZLl4mBh0WcfrCdGLhx/F/gYibA7D12FadLi7kAN666oO3oQZRCLArEskRMEinw+B5wJjIAw7YVx/6ijVJXi2tlmWi0Fy1g3qBh3ir4Y9HakML8xb2PakPHEIaSIzTWaaEhDL01kY4gHEUNtIZwpEOEPhWigoC0gAAVNPQOJHU4gE/5gV6vL9eNAUHtjp90c4mEGpqzuUnibk+mw2vbvDhovnpYCOMqsjymB5FzEn6BpBSdv9bgQea0RNHOxf7CND330puNZGrYC3ysX8rsRQ5urY8nF3bJrKfrtEuRT5CQUo/Xh2v5Z4tYtPP8HGVjRKN8U7TzXWQQfiLXWgrY4qOmzkXbCg0m5RS6hPXNRqYofabFDXCZdyDj06JfFaNUfg8H1jBEE4FvcezTFB0gwecV5wqleiCs36auPMJy4Q+ftuiAz4Sjvncp6L/DdPDVFLCjp5ldwcTOzTTzLRCeat6Sv6Fu5A0M1C81xROSMwqu1gAAAABJRU5ErkJggg==",
+                                "height": 30,
+                                "scale-type": "contain",
+                                "visible": "${data.s_error}"
+                            },                            
+                            {
+                                "type": "TextBody",
+                                "text": "${data.s_service_message}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "input-type": "number",
+                                "label": "Enter Amount (Ugx)",
+                                "name": "service_amount",
+                                "required": "${data.is_not_prn}",
+                                "visible": "${data.is_not_prn}"
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Confirm Details",
+                                "enabled": "${data.s_can_proceed}",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "s_service_message": "${data.s_service_message}",
+                                        "s_selected_service_id": "${data.s_selected_service_id}",
+                                        "s_selected_bank_service": "${data.s_selected_bank_service}",
+                                        "s_prn_number": "${data.s_prn_number}",
+                                        "s_nwsc_meter_no": "${data.s_nwsc_meter_no}",
+                                        "s_nwsc_area_selected": "${data.s_nwsc_area_selected}",
+                                        "s_umeme_meter_type": "${data.s_umeme_meter_type}",
+                                        "s_umeme_meter_no": "${data.s_umeme_meter_no}",
+                                        "s_tv_provider_selected": "${data.s_tv_provider_selected}",
+                                        "s_tv_card_no": "${data.s_tv_card_no}",
+                                        "s_amount": "${form.service_amount}",
+                                        "prn_amount": "${data.prn_amount}",
+                                        "is_prn": "${data.is_prn}",
+                                        "is_nwsc": "${data.is_nwsc}",
+                                        "is_tv": "${data.is_tv}",
+                                        "is_yaka": "${data.is_yaka}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "PAYMENT_METHOD",
+            "title": "Payment method",
+            "terminal": true,
+            "data": {
+                "is_mobile": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_account": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "selected_payment_method": {
+                    "type": "string",
+                    "__example__": "select payment method"
+                },
+                "s_service_message": {
+                    "type": "string",
+                    "__example__": "service_message"
+                },
+                "s_amount": {
+                    "type": "string",
+                    "__example__": "amount"
+                },
+                "is_prn": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_nwsc": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_yaka": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "is_tv": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "s_can_proceed": {
+                    "type": "boolean",
+                    "__example__": false
+                },
+                "s_service_status": {
+                    "type": "string",
+                    "__example__": "status"
+                },
+                "s_selected_service_id": {
+                    "type": "string",
+                    "__example__": "pay_service"
+                },
+                "s_selected_bank_service": {
+                    "type": "string",
+                    "__example__": "1"
+                },
+                "s_prn_number": {
+                    "type": "string",
+                    "__example__": "1"
+                },
+                "s_nwsc_meter_no": {
+                    "type": "string",
+                    "__example__": "select_nwsc_no"
+                },
+                "s_nwsc_area_selected": {
+                    "type": "string",
+                    "__example__": "select_nwsc_area"
+                },
+                "s_umeme_meter_type": {
+                    "type": "string",
+                    "__example__": "umeme_meter_type"
+                },
+                "s_umeme_meter_no": {
+                    "type": "string",
+                    "__example__": "umeme_meter_no"
+                },
+                "s_tv_provider_selected": {
+                    "type": "string",
+                    "__example__": "tv_provider"
+                },
+                "s_tv_card_no": {
+                    "type": "string",
+                    "__example__": "tv_card_no"
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "payment_method",
+                        "init-values": {
+                            "is_mobile": "${data.is_mobile}",
+                            "is_account": "${data.is_account}",
+                            "is_prn": "${data.is_prn}",
+                            "is_nwsc": "${data.is_nwsc}",
+                            "is_tv": "${data.is_tv}",
+                            "is_yaka": "${data.is_yaka}",
+                            "s_amount": "${data.s_amount}",
+                            "s_service_message": "${data.s_service_message}"
+                        },
+                        "children": [
+                            {
+                                "type": "RadioButtonsGroup",
+                                "label": "Choose payment mode",
+                                "required": true,
+                                "name": "payment_mode",
+                                "on-select-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "payment_mode": "${form.payment_mode}"
+                                    }
+                                },
+                                "data-source": [
+                                    {
+                                        "id": "mobile",
+                                        "title": "Mobile Money",
+                                        "description": "MTN / Airtel Phone number"
+                                    },
+                                    {
+                                        "id": "account",
+                                        "title": "Online payment",
+                                        "description": "VISA or Master Card"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter Phone number",
+                                "visible": "${data.is_mobile}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Phone Number",
+                                "name": "phone_number",
+                                "required": "${data.is_mobile}",
+                                "input-type": "number",
+                                "visible": "${data.is_mobile}"
+                            },
+                            {
+                                "type": "TextBody",
+                                "font-weight": "bold",
+                                "text": "Enter email address",
+                                "visible": "${data.is_account}"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Email addresss",
+                                "name": "email_address",
+                                "required": "${data.is_account}",
+                                "input-type": "email",
+                                "visible": "${data.is_account}"
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Initiate Payment",
+                                "on-click-action": {
+                                    "name": "complete",
+                                    "payload": {
+                                        "phone_number": "${form.phone_number}",
+                                        "email_address": "${form.email_address}",
+                                        "selected_payment_method": "${form.payment_mode}",
+                                        "s_service_message": "${data.s_service_message}",
+                                        "s_selected_bank_service": "${data.s_selected_bank_service}",
+                                        "s_prn_number": "${data.s_prn_number}",
+                                        "s_nwsc_meter_no": "${data.s_nwsc_meter_no}",
+                                        "s_amount": "${data.s_amount}",
+                                        "s_nwsc_area_selected": "${data.s_nwsc_area_selected}",
+                                        "s_umeme_meter_type": "${data.s_umeme_meter_type}",
+                                        "s_umeme_meter_no": "${data.s_umeme_meter_no}",
+                                        "s_tv_provider_selected": "${data.s_tv_provider_selected}",
+                                        "s_tv_card_no": "${data.s_tv_card_no}",
+                                        "is_prn": "${data.is_prn}",
+                                        "is_nwsc": "${data.is_nwsc}",
+                                        "is_tv": "${data.is_tv}",
+                                        "is_yaka": "${data.is_yaka}",
+                                        "is_mobile": "${data.is_mobile}",
+                                        "is_account": "${data.is_account}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

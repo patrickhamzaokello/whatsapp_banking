@@ -39,7 +39,7 @@ export class MessageHandler {
 
       logIncomingMessage(contact.wa_id, message.text.body)
       //contact is in the list of allowed contacts
-      const allowed_contacts = ["256783604580", "256787250196"]
+      const allowed_contacts = ["256783604580", "256787250196", "256706943977"]
       if (allowed_contacts.includes(contact.wa_id)) {
         let session = SessionService.getSession(userPhone) ||
           SessionService.createSession(userPhone, userName);

@@ -4,6 +4,8 @@ import { config } from '../config/environment.js';
 import { WhatsAppError } from '../errors/custom-errors.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WhatsAppService } from './whatsapp.service.js';
+import { PrnService } from '../services/prns.service.js';
+import GTPayHandler from "../handlers/gtpay.handler.js";
 
 export class FlowService {
 
@@ -34,13 +36,119 @@ export class FlowService {
             flow_token
         } = flowData
 
-        const reply = `Summary:\n\n*Service:* ${s_service_message} \n*Payment Method:* ${selected_payment_method} \n*Phone Number:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
-
         // Get the user phone number
-        const userPhoneNumber = req.body.entry[0].changes[0].value.contacts[0].wa_id;
+        let reply_userPhoneNumber = req.body.entry[0].changes[0].value.contacts[0].wa_id;
+        let reply_userName = req.body.entry[0].changes[0].value.contacts[0].profile.name;
+        let userdirection_message = "Error: Unable to initiate Payment.";
+        let summary_reply = "Unavailable summary";
 
-        // Send the reply
-        await WhatsAppService.sendMessage(businessPhoneNumberId, userPhoneNumber, reply, message_id)
+        //initiate payment for service
+        if (is_prn) {
+
+            //post the prn transaction for either mobile or account
+            if (is_mobile) {
+                const prn_service = new PrnService();
+                const result = await prn_service.universialPRNCompleteTransaction(s_prn_number, phone_number);
+                // if invalid prn
+                if (result.status_code === "1013") {
+                    userdirection_message = `🛑 Payment initiation failed. Reason: ${result.status_description.toLowerCase()}`;
+                }
+                // if valid prn
+                if (result.status_code === "1000") {
+                    const status_desc = result.status_description;
+                    const search_text = status_desc.toLowerCase();
+                    userdirection_message = `⚠ Payment initiation failed. Reason: PRN Already Paid`;
+
+                    if (search_text.includes('pending authorisation')) {
+                        userdirection_message = `👉 We have sent a prompt to this number *${phone_number}*.  Authorize the payment to complete the payment`;
+                    }
+
+                }
+                summary_reply = `*Summary:*\n\nURA Tax Payment *PRN:* ${s_prn_number} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+            }
+            if (is_account) {
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                if (status) {
+                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                } else {
+                    userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
+                }
+
+                summary_reply = `*Summary:*\n\nURA Tax Payment *PRN:* ${s_prn_number} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+
+            }
+
+        }
+        if (is_nwsc) {
+
+            //post the prn transaction for either mobile or account
+            if (is_mobile) {
+
+                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
+                // post nwsc water
+                summary_reply = `*Summary:*\n\nNWSC Bill Payment *Meter no:* ${s_nwsc_meter_no} \n*Area:* ${s_nwsc_area_selected} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+            }
+            if (is_account) {
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                if (status) {
+                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                } else {
+                    userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
+                }
+
+                summary_reply = `*Summary:*\n\nNWSC Bill Payment *Meter no:* ${s_nwsc_meter_no}  \n*Area:* ${s_nwsc_area_selected} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+
+            }
+
+        }
+        if (is_yaka) {
+
+            //post the prn transaction for either mobile or account
+            if (is_mobile) {
+
+                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
+                // post nwsc water
+                summary_reply = `*Summary:*\n\nUMEME Bill Payment *Meter no:* ${s_umeme_meter_no} \n*Meter type:* ${s_umeme_meter_type} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+            }
+            if (is_account) {
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                if (status) {
+                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                } else {
+                    userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
+                }
+
+                summary_reply = `*Summary:*\n\nUMEME Bill Payment *Meter no:* ${s_umeme_meter_no} \n*Meter type:* ${s_umeme_meter_type} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+
+            }
+
+        }
+
+        if (is_tv) {
+
+            //post the prn transaction for either mobile or account
+            if (is_mobile) {
+
+                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
+                // post nwsc water
+                summary_reply = `*Summary:*\n\nTV Subscription payment *TV no:* ${s_tv_card_no} \n*Meter type:* ${s_tv_provider_selected} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+            }
+            if (is_account) {
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                if (status) {
+                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                } else {
+                    userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
+                }
+
+                summary_reply = `*Summary:*\n\nTV Subscription payment *TV no:* ${s_tv_card_no} \n*Meter type:* ${s_tv_provider_selected} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+
+            }
+
+        }
+
+        userdirection_message = `Hello ${reply_userName},  \n${userdirection_message} \n\n${summary_reply}`;
+        await WhatsAppService.sendMessage(businessPhoneNumberId, reply_userPhoneNumber, userdirection_message, message_id)
 
     }
 
@@ -50,9 +158,9 @@ export class FlowService {
 
         const flowPayload = {
             type: 'flow',
-            header: { type: 'text', text: 'Hello' },
+            header: { type: 'text', text: 'Bill Payments' },
             body: {
-                text: 'Welcome to Gtbank Uganda – Use this form to make payments for PRN, NWSC, TV, UMEME/YAKA'
+                text: 'Use this form to make payments for URA Taxes, NWSC, TV, UMEME/YAKA Bills'
             },
             footer: { text: 'Click the button below to proceed' },
             action: {
@@ -61,8 +169,8 @@ export class FlowService {
                     flow_message_version: '3',
                     flow_token: flowToken,
                     flow_id: flowId,
-                    mode: 'draft', //remember to remove when flow is 100% ready.
-                    flow_cta: 'Select Service to Pay',
+                    // mode: 'draft', //remember to remove when flow is 100% published.
+                    flow_cta: 'Open Form',
                     flow_action: 'navigate',
                     flow_action_payload: {
                         screen: "SELECT_SERVICE",

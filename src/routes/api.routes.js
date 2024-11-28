@@ -6,6 +6,9 @@ import { URLSHORTNER } from '../services/url_shortner.service.js';
 import { PrnService } from '../services/prns.service.js';
 import { FlowService } from '../services/flow.service.js';
 import { WhatsAppService } from '../services/whatsapp.service.js';
+import { PaymentService } from '../services/payment.service.js';
+import database from '../config/database.js';
+
 const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
@@ -28,9 +31,9 @@ router.post("/webhook", async (req, res) => {
         if (messages[0]?.interactive?.button_reply) {
 
           const button_id = messages[0]?.interactive?.button_reply?.id
-          if(button_id == "payService"){
-            FlowService.sendFlow("442394835264933",contact.wa_id, businessPhoneNumberId)
-          } else{
+          if (button_id == "payService") {
+            FlowService.sendFlow("442394835264933", contact.wa_id, businessPhoneNumberId)
+          } else {
             await WhatsAppService.sendMessage(
               businessPhoneNumberId,
               contact.wa_id,
@@ -75,6 +78,70 @@ router.post('/shorten', (req, res) => {
   res.json({ shortUrl: `https://socialbanking.gtbank.co.ug/${shortCode}` });
 });
 
+//test gtpay link
+router.get('/testgtpay', async (req, res) => {
+
+  const paymentDetails = await PaymentService.generatePaymentDetails(
+    "pay prn",
+    "900000",
+    "pkasemer",
+    "pkasemer@gmail.com"
+  );
+
+  const paymentLink = await PaymentService.generatePaymentLink(paymentDetails);
+
+  const paymentMessage =
+    `Thank you !\n\n` +
+    `Here is the test payment link, 👉 ` +
+    `${paymentLink}\n\n` +
+    `Click on the link above 👆 to pay using your bank card.\n\n` +
+    `Email: email@mail.com\n` +
+    `Paying for service with Card!`;
+
+  res.status(200).send(paymentMessage);
+
+});
+
+// receive payment status
+router.post('/xpayment-status', async (req, res) => {
+  const { status, transaction_id, reference } = req.body;
+  if (!status) {
+    return res.status(400).json({ error: 'Status is required' });
+  }
+  if (!transaction_id) {
+    return res.status(400).json({ error: 'Transaction ID is required' });
+  }
+  if (!reference) {
+    return res.status(400).json({ error: 'Reference is required' });
+  }
+
+  try {
+    // lookup the details and generate the receipts or send payment failed.
+    const result = await PaymentService.paymentStatus(status, transaction_id, reference);
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//test db connection
+router.get('/testdb', async (req, res) => {
+  (async () => {
+    try {
+      const phoneNumber = '256787250196';
+      const fullName = 'Pkasemer';
+  
+      const userId = await database.getOrCreateUser(phoneNumber, fullName);
+      console.log('User ID:', userId);
+      return res.status(200).json({ userId: userId });
+    } catch (err) {
+      console.error('Error:', err);
+      return res.status(400).json({ err: err });
+    }
+  })();
+  
+});
 
 router.post('/validate-prn', async (req, res) => {
   const prnService = new PrnService();
@@ -115,4 +182,8 @@ router.get("/", (req, res) => {
   res.status(200).send(`<pre>GTbank Whatsapp API Endpoint</pre>`);
 });
 
+process.on('SIGINT', async () => {
+  await dbConnection.close();
+  process.exit(0);
+});
 export default router;

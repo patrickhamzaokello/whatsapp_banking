@@ -68,7 +68,7 @@ class MessageQueue {
       });
       
       // Implement retry logic
-      if (!message.retryCount || message.retryCount < 3) {
+      if (!message.retryCount || message.retryCount < 1) {
         message.retryCount = (message.retryCount || 0) + 1;
         this.queue.push({ message, contact, businessPhoneNumberId });
         

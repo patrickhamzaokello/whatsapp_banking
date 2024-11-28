@@ -40,7 +40,7 @@ const messageLogger = winston.createLogger({
 });
 
 // Helper functions to log messages
-export const logIncomingMessage = (phoneNumber, message) => {
+export const logIncomingMessage = (phoneNumber,message) => {
   messageLogger.info(message, {
     type: 'INCOMING',
     phoneNumber: `+${phoneNumber}`

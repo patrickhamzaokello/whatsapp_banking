@@ -91,11 +91,19 @@ export class PaymentService {
     return new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5) + 'Z';
   }
 
+  // static formatName(name) {
+  //   return name.replace(/\s+/g, '-');
+  // }
+
+  // static formatTransDetails(service) {
+  //   return `Payment-for-${service}`.replace(/\s+/g, '-');
+  // }
   static formatName(name) {
-    return name.replace(/\s+/g, '-');
+    return name.replace(/_/g, ' ').replace(/\s+/g, ' ');
   }
 
   static formatTransDetails(service) {
-    return `Payment-for-${service}`.replace(/\s+/g, '-');
+    return `Payment for ${service.replace(/_/g, ' ')}`.replace(/\s+/g, ' ');
   }
+  
 }

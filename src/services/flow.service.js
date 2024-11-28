@@ -170,7 +170,7 @@ export class FlowService {
                     flow_token: flowToken,
                     flow_id: flowId,
                     // mode: 'draft', //remember to remove when flow is 100% published.
-                    flow_cta: 'Open Form',
+                    flow_cta: 'Proceed',
                     flow_action: 'navigate',
                     flow_action_payload: {
                         screen: "SELECT_SERVICE",

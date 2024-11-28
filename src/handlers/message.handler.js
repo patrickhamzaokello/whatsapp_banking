@@ -9,7 +9,7 @@ import { PhoneNumber_Validator } from '../validators/phone_number.validator.js';
 import messageQueue from '../queue/MessageQueue.js';
 import { logIncomingMessage } from '../config/message-logger.js';
 import { FlowService } from '../services/flow.service.js';
-
+import database from '../config/database.js';
 
 export class MessageHandler {
   static CONTROL_COMMANDS = {
@@ -37,9 +37,20 @@ export class MessageHandler {
       const userName = contact.profile.name;
       const messageText = message.text.body.toLowerCase();
 
-      logIncomingMessage(contact.wa_id, message.text.body)
+
+      const userId = await database.getOrCreateUser(userPhone, userName);
+
+      const messageId = await database.insertMessageLog(
+        userId,          // UserID from previous getOrCreateUser call
+        message.id,  // WhatsApp Message ID
+        messageText,   // Message content
+        1,                // 1 for Incoming, 2 for Outgoing
+        contact.wa_id
+      );
+
+      logIncomingMessage(contact.wa_id,message.text.body)
       //contact is in the list of allowed contacts
-      const allowed_contacts = ["256783604580", "256787250196", "256706943977"]
+      const allowed_contacts = ["256783604580", "256787250196", "256706943977", "256778687196"]
       if (allowed_contacts.includes(contact.wa_id)) {
         let session = SessionService.getSession(userPhone) ||
           SessionService.createSession(userPhone, userName);

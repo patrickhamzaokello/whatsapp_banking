@@ -13,43 +13,41 @@ const router = express.Router();
 
 router.post("/webhook", async (req, res) => {
   try {
-    const data = req.body;
+    const { entry } = req.body;
 
-    // Check if "messages" exist in the payload
-    const contact = req.body.entry?.[0]?.changes[0]?.value?.contacts?.[0];
-    const businessPhoneNumberId = req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
-    const messages = data?.entry?.[0]?.changes?.[0]?.value?.messages;
-
-    if (messages && messages.length > 0) {
-      // Check if the first message has a text payload
-      const textPayload = messages[0]?.text;
-      const message_id = messages[0]?.id;
-
-      if (textPayload) {
-        await MessageHandler.handleIncomingWithQueue(messages[0], contact, businessPhoneNumberId);
-      } else {
-        if (messages[0]?.interactive?.button_reply) {
-
-          const button_id = messages[0]?.interactive?.button_reply?.id
-          if (button_id == "payService") {
-            FlowService.sendFlow("442394835264933", contact.wa_id, businessPhoneNumberId)
-          } else {
-            await WhatsAppService.sendMessage(
-              businessPhoneNumberId,
-              contact.wa_id,
-              'This service will be available soon',
-              messages[0]?.id
-            );
-          }
-        } else if (messages[0]?.interactive?.nfm_reply) {
-          await FlowService.flow_reply_processor(businessPhoneNumberId, req, message_id);
-        }
-      }
+    // Early return if no valid entry
+    if (!entry || !entry.length) {
+      return res.sendStatus(400);
     }
+
+    const change = entry[0]?.changes?.[0];
+
+    // Extract key information safely
+    const metadata = change?.value?.metadata;
+    const contact = change?.value?.contacts?.[0];
+    const messages = change?.value?.messages;
+
+    if (!messages || !messages.length) {
+      return res.sendStatus(200);
+    }
+
+    const message = messages[0];
+    const businessPhoneNumberId = metadata?.phone_number_id;
+
+    // Unified queue processing for all message types
+    await MessageHandler.handleIncomingWithQueue({
+      message,
+      contact,
+      businessPhoneNumberId,
+      originalRequest: req.body
+    });
 
     res.sendStatus(200);
   } catch (error) {
-    logger.error('Webhook error', { error });
+    logger.error('Webhook processing error', {
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
     res.sendStatus(500);
   }
 });
@@ -131,7 +129,7 @@ router.get('/testdb', async (req, res) => {
     try {
       const phoneNumber = '256787250196';
       const fullName = 'Pkasemer';
-  
+
       const userId = await database.getOrCreateUser(phoneNumber, fullName);
       console.log('User ID:', userId);
       return res.status(200).json({ userId: userId });
@@ -140,7 +138,7 @@ router.get('/testdb', async (req, res) => {
       return res.status(400).json({ err: err });
     }
   })();
-  
+
 });
 
 router.post('/validate-prn', async (req, res) => {

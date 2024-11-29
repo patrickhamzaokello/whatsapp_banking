@@ -9,8 +9,8 @@ import GTPayHandler from "../handlers/gtpay.handler.js";
 
 export class FlowService {
 
-    static async flow_reply_processor(businessPhoneNumberId, req, message_id) {
-        const flowResponse = req.body.entry[0].changes[0].value.messages[0].interactive.nfm_reply.response_json;
+    static async flow_reply_processor(businessPhoneNumberId, message, message_id) {
+        const flowResponse = message.interactive.nfm_reply.response_json;
         const flowData = JSON.parse(flowResponse);
         const {
             is_prn,
@@ -37,8 +37,8 @@ export class FlowService {
         } = flowData
 
         // Get the user phone number
-        let reply_userPhoneNumber = req.body.entry[0].changes[0].value.contacts[0].wa_id;
-        let reply_userName = req.body.entry[0].changes[0].value.contacts[0].profile.name;
+        let reply_userPhoneNumber = message.from;
+        let reply_userName = "username";
         let userdirection_message = "Error: Unable to initiate Payment.";
         let summary_reply = "Unavailable summary";
 

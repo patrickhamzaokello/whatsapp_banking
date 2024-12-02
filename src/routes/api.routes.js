@@ -141,12 +141,12 @@ router.post('/receipt', async (req, res) => {
     const receiptData = await database.generateReceiptMessage(transaction_id);
 
     // Early validation of transaction status
-    // if (receiptData.transactionDetails.status !== 'completed') {
-    //   return res.status(400).json({
-    //     error: 'Invalid transaction status',
-    //     details: 'Receipt is only available for completed transactions'
-    //   });
-    // }
+    if (receiptData.transactionDetails.status !== 'completed') {
+      return res.status(400).json({
+        error: 'Invalid transaction status',
+        details: 'Receipt is only available for completed transactions'
+      });
+    }
 
     // Generate PDF with robust error handling
     let receiptPdf;

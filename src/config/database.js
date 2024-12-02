@@ -149,7 +149,7 @@ class Database {
     }
   }
 
-  
+
 
   async insertTransaction(flowData, userId, message_id, from_contact) {
     try {
@@ -161,13 +161,29 @@ class Database {
       let columns = ['FlowToken', 'UserID', 'BillType', 'PaymentMethod', 'Amount', 'TransactionStatus', 'MessageID', 'MessageFrom'];
       let values = ['@FlowToken', '@UserID', '@BillType', '@PaymentMethod', '@Amount', '@TransactionStatus', '@MessageID', '@MessageFrom'];
 
+      const billTypes = {
+        is_prn: 'PRN',
+        is_nwsc: 'NWSC',
+        is_tv: 'TV',
+        is_yaka: 'Yaka'
+      };
+
+      const paymentMethods = {
+        is_mobile: 'Mobile',
+        is_account: 'Online',
+      };
+
+      // Find the first true boolean and assign the corresponding string
+      const billType = Object.keys(billTypes).find(key => flowData[key]) ? billTypes[Object.keys(billTypes).find(key => flowData[key])] : 'Unknown';
+      const paymentMethod = Object.keys(paymentMethods).find(key => flowData[key]) ? paymentMethods[Object.keys(paymentMethods).find(key => flowData[key])] : 'Unknown';
+
       // Prepare transaction parameters
       request.input('FlowToken', sql.NVarChar(255), flowData.flow_token);
       request.input('UserID', sql.UniqueIdentifier, userId);
-      request.input('BillType', sql.NVarChar(20)); 
-      request.input('PaymentMethod', sql.NVarChar(20)); 
+      request.input('BillType', sql.NVarChar(20), billType);
+      request.input('PaymentMethod', sql.NVarChar(20), paymentMethod);
       request.input('Amount', sql.Decimal(18, 2), flowData.s_amount);
-      request.input('TransactionStatus', sql.NVarChar(20), 'Pending');      
+      request.input('TransactionStatus', sql.NVarChar(20), 'Pending');
       request.input('MessageID', sql.NVarChar(255), message_id);
       request.input('MessageFrom', sql.NVarChar(20), from_contact);
       // Optional additional details
@@ -191,7 +207,7 @@ class Database {
         selected_payment_method: flowData.selected_payment_method,
         phone_number: flowData.phone_number,
         email_address: flowData.email_address,
-        flow_token: flowData.phone_number
+        flow_token: flowData.flow_token
       };
 
       // Add billDetails if not empty
@@ -254,7 +270,7 @@ class Database {
       await this.connect();
       const request = new sql.Request();
       request.input('TransactionID', sql.UniqueIdentifier, transactionId);
-      
+
       // Comprehensive query to fetch all relevant transaction details
       const query = `
         SELECT 
@@ -263,23 +279,23 @@ class Database {
           t.Amount,
           t.TransactionStatus,
           t.TransactionInitiationTimestamp as CreatedAt,
-          t.AdditionalDetails,
-          bt.BillTypeName,
-          pm.MethodName as PaymehtMethodName,
-          c.FullName,
-          c.Email,
-          c.PhoneNumber
+          t.BillDetails,
+          t.BillType,
+          t.PaymentMethod,
+          c.FullName as CustomerName,
+          c.Email as CustomerEmail,
+          t.MessageID as form_message_id,
+          t.MessageFrom as receiptent_contact,
+          c.PhoneNumber as CustomerPhone
         FROM 
-          Transactions t
-          LEFT JOIN BillTypes bt ON t.BillTypeID = bt.BillTypeID
-          LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+          BillsTransactions t
           LEFT JOIN Users c ON t.UserID = c.UserID
         WHERE 
           t.TransactionID = @TransactionID
       `;
-      
+
       const result = await request.query(query);
-      
+
       // If no transaction found
       if (result.recordset.length === 0) {
         return {
@@ -288,17 +304,17 @@ class Database {
           error: true
         };
       }
-      
+
       const transaction = result.recordset[0];
-      
+
       // Parse additional details
       let additionalDetails = {};
       try {
-        additionalDetails = JSON.parse(transaction.AdditionalDetails || '{}');
+        additionalDetails = JSON.parse(transaction.BillDetails || '{}');
       } catch (parseError) {
         console.warn('Error parsing additional details:', parseError);
       }
-      
+
       // Prepare receipt data object
       const receiptData = {
         success: true,
@@ -309,51 +325,31 @@ class Database {
           amount: transaction.Amount,
           status: transaction.TransactionStatus,
           date: transaction.CreatedAt || new Date(),
-          
-          serviceType: transaction.BillTypeName || 'Unknown Service',
-          paymentMethod: transaction.PaymentMethodName || 'Unknown Method'
+
+          serviceType: transaction.BillType || 'Unknown Service',
+          paymentMethod: transaction.PaymentMethod || 'Unknown Method'
         },
         customerDetails: {
-          name: transaction.CustomerName || 
-                additionalDetails.customerName || 
-                'Customer',
-          email: transaction.CustomerEmail || 
-                 additionalDetails.emailAddress || 
-                 'Not Provided',
-          phone: transaction.CustomerPhone || 
-                 additionalDetails.mobileNumber || 
-                 'Not Provided'
+          name: transaction.CustomerName ||
+            additionalDetails.customerName ||
+            'Customer',
+          
+          // Mask email - show only the domain part
+          email: await this.maskEmail(transaction.CustomerEmail ||
+            additionalDetails.emailAddress ||
+            'Not Provided'),
+        
+          // Mask phone - show only the last 4 digits
+          phone: await this.maskPhone(transaction.CustomerPhone ||
+            additionalDetails.mobileNumber ||
+            'Not Provided')
         },
         additionalInfo: {
           serviceMessage: additionalDetails.serviceMessage || 'No additional details',
           rawAdditionalDetails: additionalDetails
         },
-        
-        // Generate a formatted receipt message
-        receiptMessage: `
-  🧾 PAYMENT RECEIPT 🧾
-  Transaction ID: ${transaction.TransactionID}
-  Flow Token: ${transaction.FlowToken}
-  
-  Service Details:
-  - Type: ${transaction.BillTypeName || 'Unknown Service'}
-  - Payment Method: ${transaction.PaymentMethodName || 'Unknown Method'}
-  
-  Payment Information:
-  - Amount Paid: UGX ${transaction.Amount.toLocaleString()}
-  - Status: ${transaction.TransactionStatus}
-  
-  Customer Information:
-  - Name: ${transaction.CustomerName || 'Not Provided'}
-  - Contact: ${transaction.CustomerPhone || 'Not Provided'}
-  - Email: ${transaction.CustomerEmail || 'Not Provided'}
-  
-  Transaction Date: ${transaction.CreatedAt ? transaction.CreatedAt.toLocaleString() : 'Date Unavailable'}
-  
-  Thank you for your payment! 🙏
-        `.trim()
       };
-      
+
       return receiptData;
     } catch (err) {
       console.error('Error generating receipt message:', err);
@@ -366,77 +362,22 @@ class Database {
     }
   }
 
-  async generateReceiptMessages(transactionId) {
-    try {
-      await this.connect();
-
-      const request = new sql.Request();
-      request.input('TransactionID', sql.UniqueIdentifier, transactionId);
-
-      // Comprehensive query to fetch all relevant transaction details
-      const query = `
-        SELECT 
-          t.TransactionID,
-          t.FlowToken,
-          t.Amount,
-          t.TransactionStatus,
-          t.TransactionInitiationTimestamp as CreatedAt,
-          t.AdditionalDetails,
-          bt.BillTypeName,
-          pm.MethodName as PaymehtMethodName
-        FROM 
-          Transactions t
-          LEFT JOIN BillTypes bt ON t.BillTypeID = bt.BillTypeID
-          LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-        WHERE 
-          t.TransactionID = @TransactionID
-      `;
-
-      const result = await request.query(query);
-
-      // If no transaction found
-      if (result.recordset.length === 0) {
-        throw new Error(`No transaction found with ID ${transactionId}`);
-      }
-
-      const transaction = result.recordset[0];
-
-      // Parse additional details
-      let additionalDetails = {};
-      try {
-        additionalDetails = JSON.parse(transaction.AdditionalDetails || '{}');
-      } catch (parseError) {
-        console.warn('Error parsing additional details:', parseError);
-      }
-
-      // Format receipt message
-      const receiptMessage = `
-  🧾 PAYMENT RECEIPT 🧾
-  
-  Transaction ID: ${transaction.TransactionID}
-  Flow Token: ${transaction.FlowToken}
-  
-  Details:
-  - Type of Service: ${transaction.BillTypeName || 'Unknown Service'}
-  - Payment Method: ${transaction.PaymentMethodName || 'Unknown Method'}
-  - Amount Paid: UGX ${transaction.Amount.toLocaleString()}
-  - Status: ${transaction.TransactionStatus}
-  
-  Additional Information:
-  - Mobile Number: ${additionalDetails.mobileNumber || 'Not Provided'}
-  - Email: ${additionalDetails.emailAddress || 'Not Provided'}
-  - Service Message: ${additionalDetails.serviceMessage || 'No additional message'}
-  
-  Transaction Date: ${transaction.CreatedAt ? transaction.CreatedAt.toLocaleString() : 'Date Unavailable'}
-  
-  Thank you for your payment! 🙏
-      `.trim();
-
-      return {message: receiptMessage, status: true};
-    } catch (err) {
-      console.error('Error generating receipt message:', err);
-      throw err;
+  async maskEmail(email) {
+    email = email.toLowerCase();
+    if (email && email.includes('@')) {
+      const [localPart, domain] = email.split('@');
+      const maskedLocalPart = localPart.substring(0, 2) + '*****';  // Mask everything except the first 2 characters
+      return `${maskedLocalPart}@${domain}`;
     }
+    return email;
+  }
+  
+  async maskPhone(phone) {
+    if (phone && phone.length >= 4) {
+      const maskedPhone = phone.substring(0, phone.length - 4).replace(/[0-9]/g, '*') + phone.slice(-4);  // Mask all but the last 4 digits
+      return maskedPhone;
+    }
+    return phone;
   }
 
   // Close connection pool

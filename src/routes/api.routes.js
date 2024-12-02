@@ -9,6 +9,7 @@ import { WhatsAppService } from '../services/whatsapp.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import database from '../config/database.js';
 import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -141,7 +142,8 @@ router.post('/receipt', async (req, res) => {
     const receiptData = await database.generateReceiptMessage(transaction_id);
 
     // Early validation of transaction status
-    if (receiptData.transactionDetails.status !== 'completed') {
+
+    if (receiptData.transactionDetails.status === 'failed') {
       return res.status(400).json({
         error: 'Invalid transaction status',
         details: 'Receipt is only available for completed transactions'
@@ -151,8 +153,9 @@ router.post('/receipt', async (req, res) => {
     // Generate PDF with robust error handling
     let receiptPdf;
     try {
+      const logoPath = path.join('/app', 'src', 'public', 'images', 'gtbank_logo.png');
       receiptPdf = await PaymentService.generateReceiptPDF(receiptData, {
-        logoPath: 'src/public/images/gtbank_logo.png'
+        logoPath: logoPath
       });
     } catch (pdfError) {
       // Log the specific PDF generation error
@@ -204,9 +207,9 @@ router.post('/receipt', async (req, res) => {
     try {
       await WhatsAppService.sendTransactionReceipt(
         mediaId,
-        '256787250196',
-        'URA Tax Payments Receipt',
-        'Receipt 0023'
+        '256783604580',
+        'URA Tax Payment',
+        'Payment Receipt'
       );
     } catch (sendError) {
       console.error('Receipt send failed:', sendError);

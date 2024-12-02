@@ -40,7 +40,7 @@ export class PaymentService {
         }
 
         // Generate unique filename
-        const filename = `receipt_${transactionData.transactionDetails.transactionId}.pdf`;
+        const filename = `receipt_${transactionData.transactionDetails.flowToken}.pdf`;
         const filePath = path.join(receiptDir, filename);
 
         // Create write stream
@@ -159,7 +159,7 @@ export class PaymentService {
         doc.fontSize(10)
            .fillColor(colors.secondary)
            .font('Helvetica')
-           .text(`Receipt No: ${transactionDetails.transactionId}`, { 
+           .text(`Receipt No: ${transactionDetails.flowToken}`, { 
              align: 'left', 
              continued: false 
            });
@@ -190,7 +190,7 @@ export class PaymentService {
         doc.fontSize(12)
            .fillColor(colors.primary)
            .font('Helvetica-Bold')
-           .text('Customer', { align: 'center' });
+           .text('Customer', { align: 'left' });
 
         doc.moveDown(0.5);
 

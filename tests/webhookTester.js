@@ -85,12 +85,6 @@ class WebhookTester {
       const responseTime = endTime - startTime;
       this.results.totalTime += responseTime;
 
-      logger.info('Webhook test processed successfully', {
-        messageId: message.id,
-        responseTime: `${responseTime.toFixed(2)}ms`,
-        concurrent: this.activeRequests
-      });
-
     } catch (error) {
       this.results.failedRequests++;
       this.results.errors.push({

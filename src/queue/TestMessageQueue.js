@@ -11,11 +11,7 @@ class TestMessageQueue {
 
   // Add message to queue
   async enqueue(message, contact, businessPhoneNumberId) {
-    this.queue.push({ message, contact, businessPhoneNumberId });
-    logger.info('Message added to queue', { 
-      messageId: message.id, 
-      queueLength: this.queue.length 
-    });
+    this.queue.push({ message, contact, businessPhoneNumberId });   
     
     if (!this.isProcessing) {
       this.processQueue();
@@ -64,7 +60,6 @@ class TestMessageQueue {
   async processMessage(message, contact, businessPhoneNumberId, processId) {
     try {
       await TestMessageHandler.handleIncoming(message, contact, businessPhoneNumberId);
-      logger.info('Message processed successfully', { messageId: message.id });
     } catch (error) {
       logger.error('Failed to process message', { 
         error, 
@@ -75,10 +70,7 @@ class TestMessageQueue {
       if (!message.retryCount || message.retryCount < 3) {
         message.retryCount = (message.retryCount || 0) + 1;
         this.queue.push({ message, contact, businessPhoneNumberId });
-        logger.info('Message requeued for retry', { 
-          messageId: message.id, 
-          retryCount: message.retryCount 
-        });
+        
       }
     } finally {
       this.processing.delete(processId);
@@ -102,7 +94,6 @@ class TestMessageQueue {
   // Clear the queue
   clear() {
     this.queue = [];
-    logger.info('Queue cleared');
   }
 }
 

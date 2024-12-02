@@ -20,4 +20,4 @@ docker volume create logs
 
 # Run the container
 echo "🚀 Starting container..."
-docker-compose up -d
+docker-compose up 

@@ -123,6 +123,24 @@ router.post('/xpayment-status', async (req, res) => {
   }
 });
 
+router.post('/receipt', async (req, res) => {  
+  // transaction_id
+  const { transaction_id } = req.body;
+  if (!transaction_id) {
+    return res.status(400).json({ error: 'Transaction ID is required' });
+  }
+
+  try {
+    // lookup the details and generate the receipts or send payment failed.
+    const receiptData = await database.generateReceiptMessage(transaction_id);  
+
+    res.json(receiptData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+
+});
+
 //test db connection
 router.get('/testdb', async (req, res) => {
   (async () => {

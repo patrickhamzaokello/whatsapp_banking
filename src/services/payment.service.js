@@ -24,6 +24,78 @@ export class PaymentService {
     };
   }
 
+  static async generateReceiptPDF(transactionData) {
+    try {      
+      // Create a new PDF document
+      const doc = new PDFDocument({ size: 'A6' });
+      
+      // Generate QR Code
+      const qrCodeData = `Transaction ID: ${transactionData.transactionDetails.transactionId}\n` +
+                         `Amount: UGX ${transactionData.transactionDetails.amount.toLocaleString()}\n` +
+                         `Date: ${transactionData.transactionDetails.date.toLocaleString()}`;
+      
+      const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+
+      // Set response headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=receipt_${transactionId}.pdf`);
+      
+      // Pipe the PDF to the response
+      doc.pipe(res);
+
+      // Receipt Design
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .fillColor('#2c3e50')
+         .text('Payment Receipt', { align: 'center' });
+
+      doc.moveDown();
+
+      // Transaction Details
+      doc.fontSize(10)
+         .font('Helvetica-Bold')
+         .text('Transaction Details', { underline: true });
+      
+      const { transactionDetails, customerDetails } = transactionData;
+      
+      doc.font('Helvetica')
+         .text(`Transaction ID: ${transactionDetails.transactionId}`)
+         .text(`Flow Token: ${transactionDetails.flowToken}`)
+         .text(`Service Type: ${transactionDetails.serviceType}`)
+         .text(`Payment Method: ${transactionDetails.paymentMethod}`)
+         .text(`Amount: UGX ${transactionDetails.amount.toLocaleString()}`)
+         .text(`Status: ${transactionDetails.status}`)
+         .text(`Date: ${transactionDetails.date.toLocaleString()}`);
+
+      doc.moveDown();
+
+      // Customer Details
+      doc.font('Helvetica-Bold')
+         .text('Customer Information', { underline: true });
+      
+      doc.font('Helvetica')
+         .text(`Name: ${customerDetails.name}`)
+         .text(`Email: ${customerDetails.email}`)
+         .text(`Phone: ${customerDetails.phone}`);
+
+      // Footer
+      doc.fontSize(8)
+         .fillColor('#666666')
+         .text('Thank you for your payment!', { align: 'center' });
+
+      // Finalize PDF
+      doc.end();
+    } catch (err) {
+      // Error handling
+      console.error('Error generating receipt PDF:', err);
+      res.status(500).json({
+        error: true,
+        message: 'Failed to generate receipt',
+        details: err.message
+      });
+    }
+  }
+
   static async generatePaymentLink(paymentDetails) {
     try {
       const {

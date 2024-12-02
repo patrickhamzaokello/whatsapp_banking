@@ -53,7 +53,7 @@ export class MessageHandler {
         userId,
         message.id,
         messageText,
-        1, // Incoming message
+        'I', // Incoming message
         userPhone
       );
       logIncomingMessage(userPhone, message.text.body);

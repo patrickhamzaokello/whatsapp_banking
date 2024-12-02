@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WhatsAppService } from './whatsapp.service.js';
 import { PrnService } from '../services/prns.service.js';
 import GTPayHandler from "../handlers/gtpay.handler.js";
+import database from '../config/database.js';
 
 export class FlowService {
 
@@ -36,11 +37,16 @@ export class FlowService {
             flow_token
         } = flowData
 
+
+
         // Get the user phone number
         let reply_userPhoneNumber = message.from;
         let reply_userName = "username";
         let userdirection_message = "Error: Unable to initiate Payment.";
         let summary_reply = "Unavailable summary";
+
+        const userId = await database.getOrCreateUser(reply_userPhoneNumber);
+        const bill_result = await database.processBillPayment(flowData, userId);
 
         //initiate payment for service
         if (is_prn) {
@@ -155,6 +161,9 @@ export class FlowService {
     static async sendFlow(flowId, recipientPhoneNumber, phoneNumberId) {
 
         const flowToken = uuidv4();
+
+        const userId = await database.getOrCreateUser(recipientPhoneNumber);
+        const db_result = await database.insertFlowForm(userId, flowToken);
 
         const flowPayload = {
             type: 'flow',
@@ -314,6 +323,8 @@ export class FlowService {
                 },
                 data: payload
             });
+
+            
 
             return response.data;
         }

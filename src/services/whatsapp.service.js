@@ -33,7 +33,7 @@ export class WhatsAppService {
         userId, 
         messageId, 
         message, 
-        2,               // Outgoing message
+        'o',               // Outgoing message
         'gtbank'  // Optional message source
       );
 

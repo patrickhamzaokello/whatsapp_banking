@@ -8,6 +8,7 @@ import { FlowService } from '../services/flow.service.js';
 import { WhatsAppService } from '../services/whatsapp.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import database from '../config/database.js';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -123,22 +124,111 @@ router.post('/xpayment-status', async (req, res) => {
   }
 });
 
-router.post('/receipt', async (req, res) => {  
-  // transaction_id
+router.post('/receipt', async (req, res) => {
+  // Validate input
   const { transaction_id } = req.body;
+
+  // Input validation with more descriptive error
   if (!transaction_id) {
-    return res.status(400).json({ error: 'Transaction ID is required' });
+    return res.status(400).json({
+      error: 'Invalid request',
+      details: 'Transaction ID is required and must be provided'
+    });
   }
 
   try {
-    // lookup the details and generate the receipts or send payment failed.
-    const receiptData = await database.generateReceiptMessage(transaction_id);  
+    // Fetch receipt data with error handling
+    const receiptData = await database.generateReceiptMessage(transaction_id);
 
-    res.json(receiptData);
+    // Early validation of transaction status
+    // if (receiptData.transactionDetails.status !== 'completed') {
+    //   return res.status(400).json({
+    //     error: 'Invalid transaction status',
+    //     details: 'Receipt is only available for completed transactions'
+    //   });
+    // }
+
+    // Generate PDF with robust error handling
+    let receiptPdf;
+    try {
+      receiptPdf = await PaymentService.generateReceiptPDF(receiptData, {
+        logoPath: 'src/public/images/gtbank_logo.png'
+      });
+    } catch (pdfError) {
+      // Log the specific PDF generation error
+      console.error('Receipt PDF generation failed:', pdfError);
+      return res.status(500).json({
+        error: 'PDF generation failed',
+        details: 'Unable to create transaction receipt'
+      });
+    }
+
+    // Validate PDF file generation
+    if (!receiptPdf || !receiptPdf.file) {
+      return res.status(500).json({
+        error: 'PDF creation error',
+        details: 'No receipt file was generated'
+      });
+    }
+
+    if (!fs.existsSync(receiptPdf.filePath)) {
+      return res.status(500).json({
+        error: 'File not found',
+        details: receiptPdf
+      });
+    }
+    logger.info(`Uploading file: ${receiptPdf.filePath}`);
+
+    // Upload to WhatsApp with comprehensive error handling
+    let mediaId;
+    try {
+      const uploadResult = await WhatsAppService.uploadWhatsappMedia(receiptPdf.filePath);
+      mediaId = uploadResult?.id;
+    } catch (uploadError) {
+      console.error('WhatsApp media upload failed:', uploadError);
+      return res.status(500).json({
+        error: 'Media upload failed',
+        details: 'Unable to upload receipt to WhatsApp'
+      });
+    }
+
+    // Validate media upload
+    if (!mediaId) {
+      return res.status(500).json({
+        error: 'Upload unsuccessful',
+        details: 'No media ID received from WhatsApp'
+      });
+    }
+
+    // Send receipt to user
+    try {
+      await WhatsAppService.sendTransactionReceipt(
+        mediaId,
+        '256787250196',
+        'URA Tax Payments Receipt',
+        'Receipt 0023'
+      );
+    } catch (sendError) {
+      console.error('Receipt send failed:', sendError);
+      // Non-critical error - we've uploaded the media, just log the send failure
+      console.warn(`Failed to send receipt for transaction ${transaction_id}`);
+    }
+
+    // Respond with media ID
+    res.status(200).json({
+      message: 'Receipt processed successfully',
+      mediaId: mediaId
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    // Catch-all error handler with logging
+    console.error(`Receipt generation error for transaction ${transaction_id}:`, error);
 
+    res.status(500).json({
+      error: 'Internal server error',
+      details: 'Unable to process receipt request'
+    });
+  }
 });
 
 //test db connection

@@ -41,7 +41,8 @@ export const config = {
   },
   whatsapp: {
     apiVersion: process.env.WHATSAPP_API_VERSION,
-    baseUrl: process.env.WHATSAPP_BASE_URL
+    baseUrl: process.env.WHATSAPP_BASE_URL,
+    phoneNumberId: process.env.WHATSAPP_PHONENUMBERID
   },
   database: {
     DB_SERVER: process.env.DB_SERVER,

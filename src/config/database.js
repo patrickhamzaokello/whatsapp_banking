@@ -149,107 +149,61 @@ class Database {
     }
   }
 
-  async insertBillDetails(flowData) {
-    try {
-      await this.connect();
+  
 
-      const request = new sql.Request();
-
-      // Determine bill type and prepare specific bill details
-      request.input('FlowToken', sql.NVarChar(255), flowData.flow_token);
-      request.input('BillTypeID', sql.Int, 1); // Hardcoded for now
-
-      // Prepare column names and values based on bill type
-      let columns = ['FlowToken', 'BillTypeID'];
-      let values = ['@FlowToken', '@BillTypeID'];
-
-      switch (flowData.s_selected_bank_service) {
-        case BillTypes.URA_TAX:
-          request.input('PRNNumber', sql.NVarChar(50), flowData.s_prn_number);
-          request.input('PRNAmount', sql.Decimal(18, 2), flowData.s_amount);
-          columns.push('PRNNumber', 'PRNAmount');
-          values.push('@PRNNumber', '@PRNAmount');
-          break;
-
-        case BillTypes.TV_BILL:
-          request.input('TVSerialNumber', sql.NVarChar(50), flowData.s_tv_card_no);
-          request.input('TVAmount', sql.Decimal(18, 2), flowData.s_amount);
-          columns.push('TVSerialNumber', 'TVAmount');
-          values.push('@TVSerialNumber', '@TVAmount');
-          break;
-
-        case BillTypes.NWSC_WATER:
-          request.input('WaterMeterNumber', sql.NVarChar(50), flowData.s_nwsc_meter_no);
-          request.input('WaterMeterArea', sql.NVarChar(100), flowData.s_nwsc_area_selected);
-          request.input('WaterBillAmount', sql.Decimal(18, 2), flowData.s_amount);
-          columns.push('WaterMeterNumber', 'WaterMeterArea', 'WaterBillAmount');
-          values.push('@WaterMeterNumber', '@WaterMeterArea', '@WaterBillAmount');
-          break;
-
-        case BillTypes.UMEME_ELECTRICITY:
-          request.input('UMEMEMeterNumber', sql.NVarChar(50), flowData.s_umeme_meter_no);
-          request.input('UMEMEMeterType', sql.NVarChar(20), flowData.s_umeme_meter_type);
-          request.input('UMEMEBillAmount', sql.Decimal(18, 2), flowData.s_amount);
-          columns.push('UMEMEMeterNumber', 'UMEMEMeterType', 'UMEMEBillAmount');
-          values.push('@UMEMEMeterNumber', '@UMEMEMeterType', '@UMEMEBillAmount');
-          break;
-
-        default:
-          throw new Error('Unsupported Bill Type');
-      }
-
-      const query_string = `
-        INSERT INTO BillDetails (${columns.join(', ')})
-        VALUES (${values.join(', ')});
-        
-        SELECT SCOPE_IDENTITY() AS BillDetailID;
-      `;
-
-      // Execute the insert and return the inserted BillDetailID
-      const result = await request.query(query_string);
-
-      return result.recordset[0].BillDetailID;
-    } catch (err) {
-      console.error('Error inserting bill details:', err);
-      throw err;
-    }
-  }
-
-  async insertTransaction(flowData, userId) {
+  async insertTransaction(flowData, userId, message_id, from_contact) {
     try {
       await this.connect();
 
       const request = new sql.Request();
 
       // Prepare columns and values arrays
-      let columns = ['FlowToken', 'UserID', 'BillTypeID', 'PaymentMethodID', 'Amount', 'TransactionStatus'];
-      let values = ['@FlowToken', '@UserID', '@BillTypeID', '@PaymentMethodID', '@Amount', '@TransactionStatus'];
+      let columns = ['FlowToken', 'UserID', 'BillType', 'PaymentMethod', 'Amount', 'TransactionStatus', 'MessageID', 'MessageFrom'];
+      let values = ['@FlowToken', '@UserID', '@BillType', '@PaymentMethod', '@Amount', '@TransactionStatus', '@MessageID', '@MessageFrom'];
 
       // Prepare transaction parameters
       request.input('FlowToken', sql.NVarChar(255), flowData.flow_token);
       request.input('UserID', sql.UniqueIdentifier, userId);
-      request.input('BillTypeID', sql.Int, 1); // Hardcoded for now
-      request.input('PaymentMethodID', sql.Int, 1); // Hardcoded for now
+      request.input('BillType', sql.NVarChar(20)); 
+      request.input('PaymentMethod', sql.NVarChar(20)); 
       request.input('Amount', sql.Decimal(18, 2), flowData.s_amount);
-      request.input('TransactionStatus', sql.NVarChar(20), 'Pending');
-
+      request.input('TransactionStatus', sql.NVarChar(20), 'Pending');      
+      request.input('MessageID', sql.NVarChar(255), message_id);
+      request.input('MessageFrom', sql.NVarChar(20), from_contact);
       // Optional additional details
-      const additionalDetails = {
-        mobileNumber: flowData.phone_number,
-        emailAddress: flowData.email_address,
-        serviceMessage: flowData.s_service_message
+      const billDetails = {
+        is_prn: flowData.is_prn,
+        is_nwsc: flowData.is_nwsc,
+        is_tv: flowData.is_tv,
+        is_yaka: flowData.is_yaka,
+        is_mobile: flowData.is_mobile,
+        s_amount: flowData.s_amount,
+        is_account: flowData.is_account,
+        s_prn_number: flowData.s_prn_number,
+        s_nwsc_meter_no: flowData.s_nwsc_meter_no,
+        s_nwsc_area_selected: flowData.s_nwsc_area_selected,
+        s_umeme_meter_type: flowData.s_umeme_meter_type,
+        s_umeme_meter_no: flowData.s_umeme_meter_no,
+        s_tv_provider_selected: flowData.s_tv_provider_selected,
+        s_tv_card_no: flowData.s_tv_card_no,
+        s_selected_bank_service: flowData.s_selected_bank_service,
+        s_service_message: flowData.s_service_message,
+        selected_payment_method: flowData.selected_payment_method,
+        phone_number: flowData.phone_number,
+        email_address: flowData.email_address,
+        flow_token: flowData.phone_number
       };
 
-      // Add AdditionalDetails if not empty
-      if (Object.values(additionalDetails).some(val => val != null)) {
-        request.input('AdditionalDetails', sql.NVarChar(sql.MAX), JSON.stringify(additionalDetails));
-        columns.push('AdditionalDetails');
-        values.push('@AdditionalDetails');
+      // Add billDetails if not empty
+      if (Object.values(billDetails).some(val => val != null)) {
+        request.input('BillDetails', sql.NVarChar(sql.MAX), JSON.stringify(billDetails));
+        columns.push('BillDetails');
+        values.push('@BillDetails');
       }
 
       // Construct the dynamic SQL query
       const query_string = `
-        INSERT INTO Transactions (${columns.join(', ')})
+        INSERT INTO BillsTransactions (${columns.join(', ')})
         VALUES (${values.join(', ')});
         
         SELECT SCOPE_IDENTITY() AS TransactionID;
@@ -266,7 +220,7 @@ class Database {
   }
 
   // Comprehensive method to handle full bill and transaction insertion
-  async processBillPayment(flowData, userId) {
+  async processBillPayment(flowData, userId, message_id, from_contact) {
     try {
       // Start a transaction
       await this.connect();
@@ -274,17 +228,14 @@ class Database {
       await transaction.begin();
 
       try {
-        // Insert bill details
-        const billDetailId = await this.insertBillDetails(flowData);
 
         // Insert transaction
-        const transactionId = await this.insertTransaction(flowData, userId);
+        const transactionId = await this.insertTransaction(flowData, userId, message_id, from_contact);
 
         // Commit the transaction
         await transaction.commit();
 
         return {
-          billDetailId,
           transactionId
         };
       } catch (err) {
@@ -293,7 +244,7 @@ class Database {
         throw err;
       }
     } catch (err) {
-      console.error('Error processing bill payment:', err);
+      console.error('Error saving bill payment to db:', err);
       throw err;
     }
   }

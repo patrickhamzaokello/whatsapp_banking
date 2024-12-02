@@ -12,13 +12,14 @@ export class FlowService {
 
     static async flow_reply_processor(businessPhoneNumberId, message, message_id) {
         const flowResponse = message.interactive.nfm_reply.response_json;
+        const from_contact = message.from;
+
         const flowData = JSON.parse(flowResponse);
         const {
             is_prn,
             is_nwsc,
             is_tv,
             is_yaka,
-            s_selected_service_id,
             is_mobile,
             s_amount,
             is_account,
@@ -40,13 +41,12 @@ export class FlowService {
 
 
         // Get the user phone number
-        let reply_userPhoneNumber = message.from;
         let reply_userName = "username";
         let userdirection_message = "Error: Unable to initiate Payment.";
         let summary_reply = "Unavailable summary";
 
-        const userId = await database.getOrCreateUser(reply_userPhoneNumber);
-        const bill_result = await database.processBillPayment(flowData, userId);
+        const userId = await database.getOrCreateUser(from_contact);
+        const {transactionId} = await database.processBillPayment(flowData, userId, message_id, from_contact);
 
         //initiate payment for service
         if (is_prn) {
@@ -154,7 +154,7 @@ export class FlowService {
         }
 
         userdirection_message = `Hello ${reply_userName},  \n${userdirection_message} \n\n${summary_reply}`;
-        await WhatsAppService.sendMessage(businessPhoneNumberId, reply_userPhoneNumber, userdirection_message, message_id)
+        await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, userdirection_message, message_id)
 
     }
 

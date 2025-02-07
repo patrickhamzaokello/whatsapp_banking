@@ -1,21 +1,54 @@
 // this class with be to validate prns
 import axios from 'axios';
-import { parseStringPromise } from 'xml2js';
 import { config } from '../config/environment.js';
+import logger from '../config/logger.js';
 
 export class PrnService {
   constructor() {
     this.apiPrnDetailsEndpoint = config.bank_api.prnDetailsEndpoint;
     this.apiPrnCompleteTransaction = config.bank_api.prnUniversalUraCompleteTransaction;
+    this.TokenEndpoint = config.bank_api.middleware_authentication;
+    this.token = null;
+    this.tokenExpiry = null;
+  }
+
+  async fetchToken() {
+    try {
+      const requestData = {
+        username: config.bank_api.middleware_username,
+        password: config.bank_api.middleware_password
+      };
+
+      const response = await axios.post(this.TokenEndpoint, requestData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      this.token = response.data.accessToken;
+      // this.tokenExpiry = Date.now() + 3 * 60 * 1000; // Token is valid for 3 minutes
+      this.tokenExpiry = response.data.expiry;
+      logger.info('Token retrieved successfully');
+    } catch (error) {
+      logger.error('Failed to fetch token:', error);
+      throw new Error(`Unable to fetch token: ${error.message}`);
+    }
+  }
+
+  async getToken() {
+    if (!this.token || Date.now() > this.tokenExpiry) {
+      await this.fetchToken();
+    }
+    return this.token;
   }
 
   async validatePRN(prn) {
 
     try {
       const response = await this.getPRNDetails(prn);
-      const result = await this.parsePRNDetailsSoapResponse(response);
-      return this.formatPrnDetailsResponse(result);
+      return this.formatPrnDetailsResponse(response);
     } catch (error) {
+      // console.log('prn validation failed',error)
       throw new Error(`PRN validation failed: ${error}`);
     }
   }
@@ -23,26 +56,23 @@ export class PrnService {
   async universialPRNCompleteTransaction(prn, phonenumber) {
     try {
       const response = await this.getUniversalUraCompleteTransaction(prn, phonenumber);
-      const result = await this.parsePrnCompleteTransactionSoapResponse(response);
-      return this.formatUniversalCompleteTransactionResponse(result);
+      return this.formatUniversalCompleteTransactionResponse(response);
     } catch (error) {
       throw new Error(`Unable to intiate PRN Transaction Completion: ${error}`)
     }
   }
 
   async getPRNDetails(prn) {
-    const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-    <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-      <soap:Body>
-        <GetPRNDetails_GTPay xmlns="http://tempuri.org/">
-          <prn>${prn}</prn>
-        </GetPRNDetails_GTPay>
-      </soap:Body>
-    </soap:Envelope>`;
 
-    const response = await axios.post(this.apiPrnDetailsEndpoint, soapRequest, {
+    const token = await this.getToken();
+    const jsonRequest = {
+      prn: prn
+    };
+
+    const response = await axios.post(this.apiPrnDetailsEndpoint, jsonRequest, {
       headers: {
-        'Content-Type': 'text/xml; charset=utf-8'
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
       }
     });
 
@@ -51,19 +81,17 @@ export class PrnService {
 
 
   async getUniversalUraCompleteTransaction(prn, phonenumber) {
-    const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <UniversalUraCompleteTransaction xmlns="http://tempuri.org/">
-      <PhoneNumber>${phonenumber}</PhoneNumber>
-      <Prn>${prn}</Prn>
-    </UniversalUraCompleteTransaction>
-  </soap:Body>
-</soap:Envelope>`;
 
-    const response = await axios.post(this.apiPrnCompleteTransaction, soapRequest, {
+    const token = await this.getToken();
+    const requestData = {
+      prn: prn,
+      phonenumber: phonenumber
+    };
+
+    const response = await axios.post(this.apiPrnCompleteTransaction, requestData, {
       headers: {
-        'Content-Type': 'text/xml; charset=utf-8'
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
       }
     });
 
@@ -71,47 +99,32 @@ export class PrnService {
   }
 
 
-  async parsePRNDetailsSoapResponse(xml) {
-    try {
-      const parsedData = await parseStringPromise(xml, { explicitArray: false });
-      return parsedData['soap:Envelope']['soap:Body']['GetPRNDetails_GTPayResponse']['GetPRNDetails_GTPayResult'];
-    } catch (error) {
-      throw new Error('Failed to parse SOAP response');
-    }
-  }
 
-  async parsePrnCompleteTransactionSoapResponse(soapResponse) {
+
+
+  async formatUniversalCompleteTransactionResponse(prnResult) {
     try {
-      const parsedResult = await parseStringPromise(this.decodeHtmlEntities(soapResponse), { explicitArray: false });
-      return parsedResult['soap:Envelope']['soap:Body']['UniversalUraCompleteTransactionResponse']['UniversalUraCompleteTransactionResult'];
-    } catch (error) {
-      throw new Error('Failed to parse universal SOAP response');
-    }
-  }
- 
-  async formatUniversalCompleteTransactionResponse(prnResult){
-    try {
-      const { STATUS, CODE, PRN, REFERENCE } = prnResult;
+      const { Status, Code, Prn, Reference } = prnResult;
       const statusMap = {
         '1013': 'Invalid PRN',
         '1000': 'Valid PRN Details',
       };
 
       return {
-        status: statusMap[CODE] || 'Unknown status',
-        status_code: CODE,
-        status_description: STATUS,
-        prn_number: PRN,
-        reference: REFERENCE,
+        status: statusMap[Code] || 'Unknown status',
+        status_code: Code,
+        status_description: Status,
+        prn_number: Prn,
+        reference: Reference,
       };
     } catch (error) {
-      console.error("Failed to parse and format the inner XML content:", error);
-      return null;
+      throw new Error(`Failed to parse and format the inner XML content: ${error}`);
     }
   }
 
   formatPrnDetailsResponse(prnResult) {
-    const { StatusCode, StatusDesc, Amount, CurrencyCode, ExpiryDt, TaxpayerName, Prn } = prnResult;
+
+    const { URAStatusCode, StatusDesc, Amount, currencyCode, PaymentExpiryDate, TaxPayerName, Prn } = prnResult;
     const statusMap = {
       N: 'Invalid PRN',
       A: 'Available for payment',
@@ -119,23 +132,16 @@ export class PrnService {
     };
 
     return {
-      status: statusMap[StatusCode] || 'Unknown status',
-      status_code: StatusCode,
+      status: statusMap[URAStatusCode] || 'Unknown status',
+      status_code: URAStatusCode,
       prn_number: Prn,
       details: {
         description: StatusDesc,
         amount: Amount,
-        currency: CurrencyCode,
-        expiryDate: ExpiryDt,
-        taxpayerName: TaxpayerName,
+        currency: currencyCode,
+        expiryDate: PaymentExpiryDate,
+        taxpayerName: TaxPayerName,
       },
     };
   }
-
-  decodeHtmlEntities(encodedString) {
-    return encodedString
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&amp;/g, "&");
-  };
 }

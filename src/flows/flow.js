@@ -149,16 +149,6 @@ const SCREEN_RESPONSES = {
     screen: "PAYMENT_METHOD",
     data: {},
   },
-
-  SUCCESS: {
-    screen: "SUCCESS",
-    data: {
-      extension_message_response: {
-        params: {
-        },
-      },
-    },
-  },
 };
 
 export const getNextScreen = async (decryptedBody) => {
@@ -270,6 +260,12 @@ export const getNextScreen = async (decryptedBody) => {
           }
           // if service is nwsc
           if (data.s_selected_bank_service == "pay_nwsc") {
+
+            //format the nwsc no and remove extra spaces
+            const formattedMeterNo = data.s_nwsc_meter_no.replace(/\s/g, '');
+            const s_nwsc_area_selected = SCREEN_RESPONSES.SELECT_SERVICE.data.nwsc_area.filter((a) => a.id === data.s_nwsc_area_selected).map((a) => a.title)[0];
+            const prnChecker = new PRN_Validator();
+            const { service_message, status } = await prnChecker.checkNWSCMeter(formattedMeterNo, s_nwsc_area_selected);
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
@@ -277,18 +273,16 @@ export const getNextScreen = async (decryptedBody) => {
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
-                s_service_message: "Pay National Water and Sewerage Corporation (NWSC) bill",
-                s_can_proceed: true,
-                s_error: false,
+                s_service_message: service_message,
+                s_can_proceed: status == "available",
+                s_error: status != "available",
                 is_not_prn: true,
-                s_service_status: "status",
+                s_service_status: status,
                 s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
-                s_nwsc_area_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.nwsc_area
-                  .filter((a) => a.id === data.s_nwsc_area_selected)
-                  .map((a) => a.title)[0],
+                s_nwsc_area_selected,
                 s_nwsc_meter_no: data.s_nwsc_meter_no
               },
 
@@ -296,6 +290,13 @@ export const getNextScreen = async (decryptedBody) => {
           }
           // if service is pay yaka
           if (data.s_selected_bank_service == "pay_yaka") {
+
+            //format the umeme no and remove extra spaces
+            const formattedMeterNo = data.s_umeme_meter_no.replace(/\s/g, '');
+            const s_umeme_meter_type = data.s_umeme_meter_type.replace(/\s/g, '');
+            const prnChecker = new PRN_Validator();
+            const { service_message, status } = await prnChecker.checkUMEMeMeter(formattedMeterNo, s_umeme_meter_type);
+
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
@@ -303,24 +304,29 @@ export const getNextScreen = async (decryptedBody) => {
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
-                s_service_message: "Pay Umeme / Yaka Power bill",
-                s_can_proceed: true,
-                s_error: false,
+                s_service_message: service_message,
+                s_can_proceed: status == "available",
+                s_error: status != "available",
                 is_not_prn: true,
-                s_service_status: "status",
+                s_service_status: status,
                 s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
-                s_umeme_meter_type: SCREEN_RESPONSES.SELECT_SERVICE.data.umeme_meter_type
-                  .filter((t) => t.id === data.s_umeme_meter_type)
-                  .map((t) => t.title)[0],
+                s_umeme_meter_type,
                 s_umeme_meter_no: data.s_umeme_meter_no,
               },
 
             };
           }
           if (data.s_selected_bank_service == "pay_tv") {
+
+            //format the umeme no and remove extra spaces
+            const formattedMeterNo = data.s_tv_card_no.replace(/\s/g, '');
+            const s_tv_provider_selected = SCREEN_RESPONSES.SELECT_SERVICE.data.tv_providers.filter((t) => t.id === data.s_tv_provider_selected).map((t) => t.title)[0];
+            const prnChecker = new PRN_Validator();
+            const { service_message, status } = await prnChecker.checkTVNo(formattedMeterNo, s_tv_provider_selected);
+
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
@@ -328,18 +334,16 @@ export const getNextScreen = async (decryptedBody) => {
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
-                s_service_message: "Pay TV bill",
-                s_can_proceed: true,
-                s_error: false,
+                s_service_message: service_message,
+                s_can_proceed: status == "available",
+                s_error: status != "available",
                 is_not_prn: true,
-                s_service_status: "status",
+                s_service_status: status,
                 s_selected_service_id: data.s_selected_bank_service,
                 s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
                   .filter((a) => a.id === data.s_selected_bank_service)
                   .map((a) => a.title)[0],
-                s_tv_provider_selected: SCREEN_RESPONSES.SELECT_SERVICE.data.tv_providers
-                  .filter((t) => t.id === data.s_tv_provider_selected)
-                  .map((t) => t.title)[0],
+                s_tv_provider_selected,
                 s_tv_card_no: data.s_tv_card_no,
 
               },
@@ -454,7 +458,7 @@ export const getNextScreen = async (decryptedBody) => {
         }
 
       case "PAYMENT_METHOD":
-        // Handles user selecting UPI or Banking selector
+        // Handles user selecting mobile money or Banking selector
         if (data.payment_mode != null) {
           return {
             ...SCREEN_RESPONSES.PAYMENT_METHOD,

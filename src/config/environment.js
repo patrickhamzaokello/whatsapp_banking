@@ -9,7 +9,7 @@ const validateEnvVariables = () => {
   ];
 
   const missing = required.filter(key => !process.env[key]);
-  
+
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missing.join(', ')}\n` +
@@ -17,6 +17,10 @@ const validateEnvVariables = () => {
     );
   }
 };
+
+const buildEndpoint = (baseUrl, endpoint) => {
+  return `${baseUrl.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
+}
 
 // Run validation before exporting config
 validateEnvVariables();
@@ -27,14 +31,29 @@ export const config = {
     graphApiToken: process.env.GRAPH_API_TOKEN
   },
   bank_api: {
-    prnDetailsEndpoint: process.env.PRN_DETAILS_ENDPOINT,
-    prnUniversalUraCompleteTransaction: process.env.PRN_UNI_COMPT_ENDPOINT
+    middleware_base_url: process.env.GTBANK_MW_BASEURL,
+
+    middleware_authentication: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.MIDDLEWARE_AUTH_ENDPOINT),
+    middleware_username: process.env.MIDDLEWARE_USERNAME,
+    middleware_password: process.env.MIDDLEWARE_PASSWORD,
+    
+    prnDetailsEndpoint: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.PRN_DETAILS_ENDPOINT),
+    prnUniversalUraCompleteTransaction: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.PRN_UNI_COMPT_ENDPOINT),
+
+    umemeDetailsEndpoint: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.UMEME_DETAILS_ENDPOINT),
+    umemeUniversalCompleteTransaction: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.UMEME_COMPT_ENDPOINT),
+
+    NwscDetailsEndpoint: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.NWSC_DETAILS_ENDPOINT),
+    NwscUniversalCompleteTransaction: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.NWSC_COMPT_ENDPOINT),
+
   },
   payment: {
     customerCode: process.env.CUSTOMER_CODE,
     gtbankSecret: process.env.GTBANK_SECURE_SECRET,
     currency: 'UGX',
-    baseUrl: process.env.GTPAY_BASE_URL
+    baseUrl: process.env.GTPAY_BASE_URL,
+    prnBaseUrl: process.env.GTPAY_PRN_BASE_URL,
+    utilityBaseUrl: process.env.GTPAY_UTILITY_BASE_URL
   },
   session: {
     timeout: 5 * 60 * 1000

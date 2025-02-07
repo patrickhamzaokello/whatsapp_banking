@@ -4,13 +4,98 @@ import { config } from '../config/environment.js';
 import { WhatsAppError } from '../errors/custom-errors.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WhatsAppService } from './whatsapp.service.js';
-import { PrnService } from '../services/prns.service.js';
+import { PrnService } from './prns.service.js';
+import { UmemeService } from './umeme.service.js';
+import { NwscService } from './nwsc.service.js';
 import GTPayHandler from "../handlers/gtpay.handler.js";
 import database from '../config/database.js';
 
 export class FlowService {
 
-    static async flow_reply_processor(businessPhoneNumberId, message, message_id) {
+    static async flow_reply_processor(businessPhoneNumberId, message, contact, message_id) {
+
+        const flowResponse = message.interactive.nfm_reply.response_json;
+        const from_contact = message.from;
+        const flowData = JSON.parse(flowResponse);
+
+        const { flow_token } = flowData;
+
+        // db return flow details and 
+        const { FlowToken, UserID, FlowName } = await database.getFlowTokenDetailsbyToken(flow_token);
+
+        if (!FlowToken) {
+            await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, 'The form you submitted is invalid. Initiate a new form', message_id)
+        }
+
+        switch (FlowName) {
+            case 'Bills Payment':
+                await this.processBillPaymentReceivedFlowMessage(businessPhoneNumberId, message, contact, message_id);
+                break;
+            case 'Account Openning':
+                await this.processAccountOpeningFlowMessage(businessPhoneNumberId, message, contact, message_id);
+                break;
+            case 'Customer Support':
+                await this.processCustomerSupportFlowMessage(businessPhoneNumberId, message, contact, message_id);
+                break;
+            case 'Merchant Payment':
+                await this.processMerchantsPaymentFlowMessage(businessPhoneNumberId, message, contact, message_id);
+                break;
+            default:
+                await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, 'The form you submitted is invalid. Initiate a new form', message_id)
+        }
+
+    }
+
+    static async processMerchantsPaymentFlowMessage(businessPhoneNumberId, message, contact, message_id) {
+        const flowResponse = message.interactive.nfm_reply.response_json;
+        const from_contact = message.from;
+        const flowData = JSON.parse(flowResponse);
+        const message_body = `Hey ${contact.profile.name}, \n\nPlease authorize debit request sent to your mobile money number to complete payment to merchant. \n\nYou will receive a receipt here after payment is confirmed`            
+        await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, message_body, message_id)
+
+    }
+
+    static async processCustomerSupportFlowMessage(businessPhoneNumberId, message, contact, message_id) {
+        const flowResponse = message.interactive.nfm_reply.response_json;
+        const from_contact = message.from;
+        const flowData = JSON.parse(flowResponse);
+        const message_body = `Hey ${contact.profile.name}, \n\nWe have received your message, our customer support team will get back to you shortly.`
+
+        //save customer support issue form to db
+        const userId = await database.getOrCreateUser(from_contact);
+        const { supportID, FlowToken, MessageID } = await database.saveCustomerSupportFlowData(flowData, userId, message_id, from_contact);
+
+        if (supportID) {
+            let handover_to_human = true;
+            await database.updateUserChatState(userId, handover_to_human);
+            await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, message_body, message_id)
+        } else {
+            await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, 'We are unable to forward your request, please try again', message_id)
+        }
+
+    }
+
+    static async processAccountOpeningFlowMessage(businessPhoneNumberId, message, contact, message_id) {
+        console.log(message)
+        const flowResponse = message.interactive.nfm_reply.response_json;
+        const from_contact = message.from;
+        const flowData = JSON.parse(flowResponse);
+        const message_body = `Hey ${contact.profile.name}, \n\nTo complete your account setup, simply tap 'Send Location' below to share your residential address.\n\nYour information is safe with us.`
+
+        //save account form to db
+        const userId = await database.getOrCreateUser(from_contact);
+        const { AccountID, FlowToken, MessageID } = await database.saveAccountOpeningFlowData(flowData, userId, message_id, from_contact);
+
+        if (AccountID) {
+            // sendLocationRequestMessage
+            await WhatsAppService.sendLocationRequestMessage(from_contact, message_body);
+        } else {
+            await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, 'Error occur while saving your data! Try again', message_id)
+        }
+
+    }
+
+    static async processBillPaymentReceivedFlowMessage(businessPhoneNumberId, message, contact, message_id) {
         const flowResponse = message.interactive.nfm_reply.response_json;
         const from_contact = message.from;
 
@@ -39,14 +124,14 @@ export class FlowService {
         } = flowData
 
 
-
         // Get the user phone number
-        let reply_userName = "username";
+        let reply_userName = contact.profile.name;
         let userdirection_message = "Error: Unable to initiate Payment.";
-        let summary_reply = "Unavailable summary";
+        let summary_reply = "Please Try again";
 
         const userId = await database.getOrCreateUser(from_contact);
-        const {transactionId} = await database.processBillPayment(flowData, userId, message_id, from_contact);
+        const { TXN_ID } = await database.processBillPayment(flowData, userId, message_id, from_contact);
+
 
         //initiate payment for service
         if (is_prn) {
@@ -70,17 +155,17 @@ export class FlowService {
                     }
 
                 }
-                summary_reply = `*Summary:*\n\nURA Tax Payment *PRN:* ${s_prn_number} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*PRN Number:* ${s_prn_number} \n*Amount(UGX):* ${s_amount}`.trim();
             }
             if (is_account) {
-                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(TXN_ID, email_address, s_selected_bank_service, s_amount, reply_userName, s_prn_number);
                 if (status) {
-                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`
                 } else {
                     userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
                 }
 
-                summary_reply = `*Summary:*\n\nURA Tax Payment *PRN:* ${s_prn_number} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*PRN Number:* ${s_prn_number} \n*Amount(UGX):* ${s_amount}`.trim();
 
             }
 
@@ -90,19 +175,33 @@ export class FlowService {
             //post the prn transaction for either mobile or account
             if (is_mobile) {
 
-                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
+                const nwsc_service = new NwscService();
+                await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, "Please wait, as I initiate your payment...🟡", message_id)
+
+                const result = await nwsc_service.InitiateNwscTransaction(s_nwsc_meter_no, s_nwsc_area_selected, TXN_ID, s_amount, phone_number);
+
+                console.log(result);
+                // if invalid yaka
+                if (result.status_code !== "1000") {
+                    userdirection_message = `NWSC Payment initiation failed. ⛔`;
+                }
+                // if valid yaka
+                if (result.status_code === "1000") {
+                    const status_desc = result.status;
+                    userdirection_message = `NWSC payment has been completed Successfully ✅`;
+                }
                 // post nwsc water
-                summary_reply = `*Summary:*\n\nNWSC Bill Payment *Meter no:* ${s_nwsc_meter_no} \n*Area:* ${s_nwsc_area_selected} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*NWSC Meter no:* ${s_nwsc_meter_no}\n*Area:* ${s_nwsc_area_selected} \n*Amount(UGX):* ${s_amount}`.trim();
             }
             if (is_account) {
-                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(TXN_ID, email_address, s_selected_bank_service, s_amount, reply_userName, s_nwsc_meter_no);
                 if (status) {
-                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`
                 } else {
                     userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
                 }
 
-                summary_reply = `*Summary:*\n\nNWSC Bill Payment *Meter no:* ${s_nwsc_meter_no}  \n*Area:* ${s_nwsc_area_selected} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*NWSC Meter no:* ${s_nwsc_meter_no}\n*Area:* ${s_nwsc_area_selected} \n*Amount(UGX):* ${s_amount}`.trim();
 
             }
 
@@ -112,19 +211,32 @@ export class FlowService {
             //post the prn transaction for either mobile or account
             if (is_mobile) {
 
-                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
-                // post nwsc water
-                summary_reply = `*Summary:*\n\nUMEME Bill Payment *Meter no:* ${s_umeme_meter_no} \n*Meter type:* ${s_umeme_meter_type} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                const umemeService = new UmemeService();
+                await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, "Please wait, as I initiate your payment...🟡", message_id)
+                const result = await umemeService.InitiateUmemeTransaction(s_umeme_meter_no, s_umeme_meter_type.toLowerCase(), TXN_ID, s_amount, phone_number);
+                console.log(result);
+                // if invalid yaka
+                if (result.status_code !== "1000") {
+                    userdirection_message = `Umeme Payment initiation failed. ⛔`;
+                }
+                // if valid yaka
+                if (result.status_code === "1000") {
+                    const status_desc = result.status;
+                    userdirection_message = `Umeme payment has been completed Successfully ✅`;
+                }
+                summary_reply = `*UMEME Meter no:* ${s_umeme_meter_no}\n*Meter type:* ${s_umeme_meter_type} \n*Amount(UGX):* ${s_amount}`.trim();
+
+
             }
             if (is_account) {
-                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(TXN_ID, email_address, s_selected_bank_service, s_amount, reply_userName, s_umeme_meter_no);
                 if (status) {
-                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`
                 } else {
                     userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
                 }
 
-                summary_reply = `*Summary:*\n\nUMEME Bill Payment *Meter no:* ${s_umeme_meter_no} \n*Meter type:* ${s_umeme_meter_type} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*UMEME Meter no:* ${s_umeme_meter_no}\n*Meter type:* ${s_umeme_meter_type} \n*Amount(UGX):* ${s_amount}`.trim();
 
             }
 
@@ -135,43 +247,92 @@ export class FlowService {
             //post the prn transaction for either mobile or account
             if (is_mobile) {
 
-                userdirection_message = `🛑Unable to initiate payment on this number *${phone_number}*.  please try again`;
+                userdirection_message = `We have sent a prompt to this number *${phone_number}*.  Authorize the payment to complete the payment`;
                 // post nwsc water
-                summary_reply = `*Summary:*\n\nTV Subscription payment *TV no:* ${s_tv_card_no} \n*Meter type:* ${s_tv_provider_selected} \n*Payment Method:* Mobile \n*Phone:* ${phone_number} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
+                summary_reply = `*TV no:* ${s_tv_card_no}\n*Provider:* ${s_tv_provider_selected} \n*Amount(UGX):* ${s_amount}`.trim();
             }
             if (is_account) {
-                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(email_address, s_selected_bank_service, s_amount, reply_userName);
+                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(TXN_ID, email_address, s_selected_bank_service, s_amount, reply_userName, s_tv_card_no);
                 if (status) {
-                    userdirection_message = `Your payment has been initiated successfully. Please complete your payment using the following link: ${paymentLink}`
+                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`
                 } else {
                     userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
                 }
 
-                summary_reply = `*Summary:*\n\nTV Subscription payment *TV no:* ${s_tv_card_no} \n*Meter type:* ${s_tv_provider_selected} \n*Payment Method:* GTBank GTPay \n*Email:* ${email_address} \n*Amount(UGX):* ${s_amount} \n\n*Form ID:* ${flow_token}`.trim();
-
+                summary_reply = `*TV no:* ${s_tv_card_no}\n*Provider:* ${s_tv_provider_selected} \n*Amount(UGX):* ${s_amount}`.trim();
             }
 
         }
 
         userdirection_message = `Hello ${reply_userName},  \n${userdirection_message} \n\n${summary_reply}`;
         await WhatsAppService.sendMessage(businessPhoneNumberId, from_contact, userdirection_message, message_id)
-
     }
 
-    static async sendFlow(flowId, recipientPhoneNumber, phoneNumberId) {
 
+    static async sendCustomerSupportFlow(flowId, recipientPhoneNumber, phoneNumberId) {
+        const flowToken = uuidv4();
+        const userId = await database.getOrCreateUser(recipientPhoneNumber);
+        const db_result = await database.insertFlowForm(userId, flowToken, "Customer Support");
+        const flowPayload = {
+            type: 'flow',
+            header: { type: 'text', text: 'Customer Support' },
+            body: {
+                text: 'Use the form below👇 to submit your support request. Our support team will get back to you as soon as possible.'
+            },
+            action: {
+                name: 'flow',
+                parameters: {
+                    flow_message_version: '3',
+                    flow_id: flowId,
+                    flow_token: flowToken,
+                    flow_cta: 'Support form',
+                    flow_action: 'navigate',
+                    flow_action_payload: {
+                        screen: "CUSTOMER_QUERIES", 
+                    }
+                }
+            }
+        }
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: recipientPhoneNumber,
+            type: 'interactive',
+            interactive: flowPayload
+        };
+
+        try {
+            const response = await axios({
+                method: "POST",
+                url: `${config.whatsapp.baseUrl}/${config.whatsapp.apiVersion}/${phoneNumberId}/messages`,
+                headers: {
+                    Authorization: `Bearer ${config.webhook.graphApiToken}`
+                },
+                data: payload
+            });
+
+
+
+            return response.data;
+        }
+        catch (error) {
+            logger.error('Error sending WhatsApp Flow message', { recipientPhoneNumber, flowId, error });
+            throw new WhatsAppError('Failed to send message flow');
+        }
+    }
+
+    static async sendMerchantPaymentFlow(flowId, recipientPhoneNumber, phoneNumberId) {
         const flowToken = uuidv4();
 
         const userId = await database.getOrCreateUser(recipientPhoneNumber);
-        const db_result = await database.insertFlowForm(userId, flowToken);
+        const db_result = await database.insertFlowForm(userId, flowToken, "Merchant Payment");
 
         const flowPayload = {
             type: 'flow',
-            header: { type: 'text', text: 'Bill Payments' },
+            header: { type: 'text', text: 'Merchant Payments' },
             body: {
-                text: 'Use this form to make payments for URA Taxes, NWSC, TV, UMEME/YAKA Bills'
+                text: 'Click the button below 👇 to Initiate payments to a merchant.🎁'
             },
-            footer: { text: 'Click the button below to proceed' },
             action: {
                 name: 'flow',
                 parameters: {
@@ -179,7 +340,151 @@ export class FlowService {
                     flow_token: flowToken,
                     flow_id: flowId,
                     // mode: 'draft', //remember to remove when flow is 100% published.
-                    flow_cta: 'Proceed',
+                    flow_cta: 'Pay merchant',
+                    flow_action: 'navigate',
+                    flow_action_payload: {
+                        screen: "WELCOME", //remember to update the screen name if change
+                    }
+                }
+            }
+        };
+
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: recipientPhoneNumber,
+            type: 'interactive',
+            interactive: flowPayload
+        };
+
+        try {
+            const response = await axios({
+                method: "POST",
+                url: `${config.whatsapp.baseUrl}/${config.whatsapp.apiVersion}/${phoneNumberId}/messages`,
+                headers: {
+                    Authorization: `Bearer ${config.webhook.graphApiToken}`
+                },
+                data: payload
+            });
+
+
+
+            return response.data;
+        }
+        catch (error) {
+            logger.error('Error sending WhatsApp Flow message', { recipientPhoneNumber, flowId, error });
+            throw new WhatsAppError('Failed to send message flow');
+        }
+    }
+
+    static async sendAccountOpenningFlow(flowId, recipientPhoneNumber, phoneNumberId) {
+        const flowToken = uuidv4();
+
+        const userId = await database.getOrCreateUser(recipientPhoneNumber);
+        const db_result = await database.insertFlowForm(userId, flowToken, "Account Openning");
+        const flowPayload = {
+            type: 'flow',
+            header: { type: 'text', text: 'Open a GTbank Account' },
+            body: {
+                text: 'Please fill in the form below 👇 to open your account.'
+            },
+            action: {
+                name: 'flow',
+                parameters: {
+                    flow_message_version: '3',
+                    flow_token: flowToken,
+                    flow_id: flowId,
+                    // mode: 'draft', //remember to remove when flow is 100% published.
+                    flow_cta: 'Account Openning Form',
+                    flow_action: 'navigate',
+                    flow_action_payload: {
+                        screen: "ACCOUNT", //remember to update the screen name if changed
+                        data: {
+                            selected_account_type: "digital",
+                            selected_account_currency: "ugx",
+                            account_currency: [
+                                {
+                                    id: "UGX",
+                                    title: "UGX"
+                                },
+                                {
+                                    id: "USD",
+                                    title: "USD"
+                                },
+                                {
+                                    id: "EURO",
+                                    title: "EURO"
+                                },
+                                {
+                                    id: "GBP",
+                                    title: "GBP"
+                                }
+                            ],
+                            account_type: [
+                                {
+                                    id: "Digital Account",
+                                    title: "Digital Account"
+                                },
+                                {
+                                    id: "GT Savings Account",
+                                    title: "GT Savings Account"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        };
+
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: recipientPhoneNumber,
+            type: 'interactive',
+            interactive: flowPayload
+        };
+
+        try {
+            const response = await axios({
+                method: "POST",
+                url: `${config.whatsapp.baseUrl}/${config.whatsapp.apiVersion}/${phoneNumberId}/messages`,
+                headers: {
+                    Authorization: `Bearer ${config.webhook.graphApiToken}`
+                },
+                data: payload
+            });
+
+
+
+            return response.data;
+        }
+        catch (error) {
+            logger.error('Error sending WhatsApp Flow message', { recipientPhoneNumber, flowId, error });
+            throw new WhatsAppError('Failed to send message flow');
+        }
+    }
+
+    static async sendBillsPaymentFlow(flowId, recipientPhoneNumber, phoneNumberId) {
+
+        const flowToken = uuidv4();
+
+        const userId = await database.getOrCreateUser(recipientPhoneNumber);
+        const db_result = await database.insertFlowForm(userId, flowToken, "Bills Payment");
+
+        const flowPayload = {
+            type: 'flow',
+            header: { type: 'text', text: 'To Pay Tax or Utilities?' },
+            body: {
+                text: 'Use the form below 👇 to initiate payment. With this form you can pay for URA, UMEME, NWSC and TV subscriptions.'
+            },
+            action: {
+                name: 'flow',
+                parameters: {
+                    flow_message_version: '3',
+                    flow_token: flowToken,
+                    flow_id: flowId,
+                    // mode: 'draft', //remember to remove when flow is 100% published.
+                    flow_cta: 'Bill payment form',
                     flow_action: 'navigate',
                     flow_action_payload: {
                         screen: "SELECT_SERVICE",
@@ -205,10 +510,10 @@ export class FlowService {
                                     id: "pay_yaka",
                                     title: "Pay Yaka / Umeme"
                                 },
-                                {
-                                    id: "pay_tv",
-                                    title: "Pay Tv subscription"
-                                }
+                                // {
+                                //     id: "pay_tv",
+                                //     title: "Pay Tv subscription"
+                                // }
                             ],
                             nwsc_area: [
                                 {
@@ -324,69 +629,7 @@ export class FlowService {
                 data: payload
             });
 
-            
 
-            return response.data;
-        }
-        catch (error) {
-            logger.error('Error sending WhatsApp Flow message', { recipientPhoneNumber, flowId, error });
-            throw new WhatsAppError('Failed to send message flow');
-        }
-    }
-
-
-    static async sendInteractiveMessage(body_message, recipientPhoneNumber, phoneNumberId) {
-
-        const flowPayload = {
-            type: "button",
-            header: {
-                type: "image",
-                image: {
-                    id: "600158732435400"
-                }
-            },
-            body: {
-                text: body_message
-            },
-            footer: {
-                text: "© 2024 Guaranty Trust Bank, Uganda."
-            },
-            action: {
-                buttons: [
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "payService",
-                            "title": "Pay Bills"
-                        }
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "otherOption",
-                            "title": "More"
-                        }
-                    }
-                ]
-            }
-        }
-        const payload = {
-            messaging_product: 'whatsapp',
-            recipient_type: 'individual',
-            to: recipientPhoneNumber,
-            type: 'interactive',
-            interactive: flowPayload
-        };
-
-        try {
-            const response = await axios({
-                method: "POST",
-                url: `${config.whatsapp.baseUrl}/${config.whatsapp.apiVersion}/${phoneNumberId}/messages`,
-                headers: {
-                    Authorization: `Bearer ${config.webhook.graphApiToken}`
-                },
-                data: payload
-            });
 
             return response.data;
         }

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import logger from '../config/logger.js';
-import {config} from '../config/environment.js';
-import {PaymentError} from '../errors/custom-errors.js';
+import { config } from '../config/environment.js';
+import { PaymentError } from '../errors/custom-errors.js';
 import { URLSHORTNER } from './url_shortner.service.js';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode'
@@ -9,11 +9,12 @@ import path from 'path';
 import fs from 'fs';
 
 export class PaymentService {
-  static async generatePaymentDetails(service, amount, userName, email) {
-    const orderId = this.generateOrderId();
+  static async generatePaymentDetails(service, amount, userName, email, prn, transactionId) {
+    const orderId = transactionId;
     const transDate = this.getCurrentDate();
     const payerName = this.formatName(userName);
     const transDetails = this.formatTransDetails(service);
+    const prn_number = this.formatPRN(prn);
 
     return {
       amount,
@@ -24,7 +25,8 @@ export class PaymentService {
       transDetails,
       transDate,
       emailAddress: email,
-      service
+      service,
+      prn_number,
     };
   }
 
@@ -47,8 +49,8 @@ export class PaymentService {
         const writeStream = fs.createWriteStream(filePath);
 
         // Create a new PDF document with more generous margins
-        const doc = new PDFDocument({ 
-          size: 'A5', 
+        const doc = new PDFDocument({
+          size: 'A5',
           margins: {
             top: 50,
             bottom: 50,
@@ -71,14 +73,14 @@ export class PaymentService {
 
         // Page dimensions
         const pageWidth = doc.page.width - 100; // Subtract margins
-        
-        
+
+
         // Add logo if provided
         if (logoPath && fs.existsSync(logoPath)) {
           // Logo dimensions and positioning
           const logoWidth = 50;
           const logoHeight = 50;
-          
+
           doc.image(logoPath, doc.page.margins.left, doc.page.margins.top, {
             width: logoWidth,
             height: logoHeight,
@@ -92,9 +94,9 @@ export class PaymentService {
 
         // Helper function to create a two-column layout with consistent alignment
         const createTwoColumnLayout = (doc, items, options = {}) => {
-          const { 
-            labelColor = colors.primary, 
-            valueColor = colors.accent, 
+          const {
+            labelColor = colors.primary,
+            valueColor = colors.accent,
             fontSize = 10,
             labelFont = 'Helvetica',
             valueFont = 'Helvetica-Bold'
@@ -102,74 +104,68 @@ export class PaymentService {
 
           // Total page width minus margins
           const totalWidth = doc.page.width - (doc.page.margins.left + doc.page.margins.right);
-          
+
           items.forEach((item, index) => {
             // Reset cursor position for each item
             doc.fontSize(fontSize);
 
             // Start a new text block that spans the full page width
-            doc.text('', { 
+            doc.text('', {
               width: totalWidth,
               align: 'justify'
             });
 
             // Label on the left
             doc.fillColor(labelColor)
-               .font(labelFont)
-               .text(item.label, { 
-                 continued: true,
-                 align: 'left'
-               });
+              .font(labelFont)
+              .text(item.label, {
+                continued: true,
+                align: 'left'
+              });
 
             // Value on the right
             doc.fillColor(valueColor)
-               .font(valueFont)
-               .text(item.value, { 
-                 align: 'right'
-               });
+              .font(valueFont)
+              .text(item.value, {
+                align: 'right'
+              });
 
             // Add subtle separator (except for last item)
             if (index < items.length - 1) {
               doc.moveDown(0.5)
-                 .strokeColor(colors.border)
-                 .lineWidth(0.5)
-                 .moveTo(doc.page.margins.left, doc.y)
-                 .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-                 .stroke();
+                .strokeColor(colors.border)
+                .lineWidth(0.5)
+                .moveTo(doc.page.margins.left, doc.y)
+                .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+                .stroke();
               doc.moveDown(0.5);
             }
           });
         };
 
         // Destructure transaction data
-        const { transactionDetails, customerDetails } = transactionData;
+        const { transactionDetails, customerDetails, additionalInfo } = transactionData;
 
         // Header
         doc.fontSize(18)
-           .fillColor(colors.primary)
-           .font('Helvetica-Bold')
-           .text('RECEIPT', { 
-             align: 'center',
-             underline: true
-           });
+          .fillColor(colors.primary)
+          .font('Helvetica-Bold')
+          .text('RECEIPT', {
+            align: 'center',
+            underline: true
+          });
 
         doc.moveDown(1.5);
 
         // Transaction Header
         doc.fontSize(10)
-           .fillColor(colors.secondary)
-           .font('Helvetica')
-           .text(`Receipt No: ${transactionDetails.flowToken}`, { 
-             align: 'left', 
-             continued: false 
-           });
-        doc.moveDown(1);
+          .fillColor(colors.secondary)
+          .font('Helvetica')
+          .text(`Date: ${transactionDetails.date.toLocaleString()}`, {
+            align: 'left',
+            continued: false
+          });
 
-        doc.fontSize(10)
-           .fillColor(colors.primary)
-           .text(`Date: ${transactionDetails.date.toLocaleString()}`, { 
-             align: 'left' 
-           });
 
         doc.moveDown(1);
 
@@ -177,6 +173,7 @@ export class PaymentService {
         const transactionItems = [
           { label: 'Transaction ID', value: transactionDetails.transactionId },
           { label: 'Service Type', value: transactionDetails.serviceType },
+          { label: 'Service Detail', value: additionalInfo.serviceMessage },
           { label: 'Payment Method', value: transactionDetails.paymentMethod },
           { label: 'Amount', value: `UGX ${transactionDetails.amount.toLocaleString()}` },
           { label: 'Status', value: transactionDetails.status }
@@ -188,9 +185,9 @@ export class PaymentService {
 
         // Customer Information Header
         doc.fontSize(12)
-           .fillColor(colors.primary)
-           .font('Helvetica-Bold')
-           .text('Customer', { align: 'left' });
+          .fillColor(colors.primary)
+          .font('Helvetica-Bold')
+          .text('Customer', { align: 'left' });
 
         doc.moveDown(0.5);
 
@@ -210,7 +207,7 @@ export class PaymentService {
         // Move to bottom of page for QR Code
         doc.switchToPage(0);
         const pageHeight = doc.page.height;
-        
+
         // QR Code Generation
         const qrCodeData = JSON.stringify({
           transactionId: transactionDetails.transactionId,
@@ -228,28 +225,28 @@ export class PaymentService {
 
         // Convert data URL to buffer
         const qrCodeBuffer = Buffer.from(qrCodeImage.split(',')[1], 'base64');
-        
+
         // Add QR Code to bottom of page
-        doc.image(qrCodeBuffer, xPosition, yPosition, { 
+        doc.image(qrCodeBuffer, xPosition, yPosition, {
           width: qrCodeSize,
           align: 'center'
         });
 
         // QR Code label
         doc.fontSize(8)
-           .fillColor(colors.secondary)
-           .text('Scan for transaction details', { 
-             align: 'center',
-             y: yPosition + qrCodeSize + 10
-           });
+          .fillColor(colors.secondary)
+          .text('Scan for transaction details', {
+            align: 'center',
+            y: yPosition + qrCodeSize + 10
+          });
 
         // Footer
         doc.fontSize(8)
-           .fillColor(colors.secondary)
-           .text('Thank you for your transaction', { 
-             align: 'center', 
-             y: pageHeight - 50 
-           });
+          .fillColor(colors.secondary)
+          .text('Thank you for your transaction', {
+            align: 'center',
+            y: pageHeight - 50
+          });
 
         // Finalize PDF
         doc.end();
@@ -280,7 +277,8 @@ export class PaymentService {
     });
   }
 
-  static async generatePaymentLink(paymentDetails) {
+  static async generateUtitilyPaymentLink(paymentDetails) {
+
     try {
       const {
         amount,
@@ -290,13 +288,14 @@ export class PaymentService {
         payerName,
         transDetails,
         transDate,
-        emailAddress
+        emailAddress,
+        prn_number
       } = paymentDetails;
 
       const secureSecret = config.payment.gtbankSecret;
       const gtp_SecureHashType = "SHA256";
 
-      const hash_input_data = 
+      const hash_input_data =
         `gtp_Amount=${amount}&` +
         `gtp_Currency=${currency}&` +
         `gtp_CustomerCode=${customerCode}&` +
@@ -306,21 +305,72 @@ export class PaymentService {
 
       const secure_hash = this.hashAllFields(hash_input_data, gtp_SecureHashType, secureSecret);
 
-      const url = 
-        `${config.payment.baseUrl}?` +
+      const url =
+        `${config.payment.prnBaseUrl}?` +
         `${hash_input_data}&` +
         `gtp_TransDate=${transDate}&` +
         `gtp_SecureHash=${secure_hash}&` +
         `gtp_SecureHashType=${gtp_SecureHashType}&` +
         `gtp_EmailAddress=${emailAddress}`;
 
+      //shorten the url and return
+      const shortCode = URLSHORTNER.generateShortCode();
+      URLSHORTNER.saveUrl(shortCode, url);
+      const shorten_url = `https://socialbanking.gtbank.co.ug/${shortCode}`;
+
+
+      return shorten_url;
+
+    } catch (error) {
+      logger.error('Error generating payment link', { error, paymentDetails });
+      throw new PaymentError('Failed to generate payment link');
+    }
+  }
+
+  
+
+  static async generatePRNPaymentLink(paymentDetails) {
+    try {
+      const {
+        amount,
+        currency,
+        customerCode,
+        orderId,
+        payerName,
+        transDetails,
+        transDate,
+        emailAddress,
+        prn_number
+      } = paymentDetails;
+
+      const secureSecret = config.payment.gtbankSecret;
+      const gtp_SecureHashType = "SHA256";
+
+      const hash_input_data =
+        `gtp_Amount=${amount}&` +
+        `gtp_Currency=${currency}&` +
+        `gtp_CustomerCode=${customerCode}&` +
+        `gtp_OrderId=${orderId}&` +
+        `gtp_PayerName=${payerName}&` +
+        `gtp_TransDetails=${transDetails}`;
+
+      const secure_hash = this.hashAllFields(hash_input_data, gtp_SecureHashType, secureSecret);
+
+      const url =
+        `${config.payment.prnBaseUrl}?` +
+        `${hash_input_data}&` +
+        `gtp_TransDate=${transDate}&` +
+        `gtp_SecureHash=${secure_hash}&` +
+        `gtp_SecureHashType=${gtp_SecureHashType}&` +
+        `gtp_EmailAddress=${emailAddress}&` +
+        `gtp_PRN=${prn_number}`;
 
       //shorten the url and return
       const shortCode = URLSHORTNER.generateShortCode();
       URLSHORTNER.saveUrl(shortCode, url);
       const shorten_url = `https://socialbanking.gtbank.co.ug/${shortCode}`;
 
-      
+
       return shorten_url;
 
     } catch (error) {
@@ -332,22 +382,19 @@ export class PaymentService {
   static hashAllFields(hash_input, secureHashType, secureSecret) {
     hash_input = hash_input.replace(/&$/, '');
     const secret_bytes = Buffer.from(secureSecret, 'hex');
-    
+
     return crypto.createHmac('sha256', secret_bytes)
       .update(hash_input + secureHashType)
       .digest('hex')
       .toUpperCase();
   }
 
-  static generateOrderId() {
-    return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
 
   static getCurrentDate() {
     return new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5) + 'Z';
   }
 
- 
+
   static formatName(name) {
     return name.replace(/_/g, ' ').replace(/\s+/g, ' ');
   }
@@ -355,5 +402,9 @@ export class PaymentService {
   static formatTransDetails(service) {
     return `Payment for ${service.replace(/_/g, ' ')}`.replace(/\s+/g, ' ');
   }
-  
+
+  static formatPRN(prn) {
+    return prn.replace(/\D/g, '');
+  }
+
 }

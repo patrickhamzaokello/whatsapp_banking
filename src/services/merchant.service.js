@@ -1,12 +1,12 @@
 // this class with be to validate prns
-import axios from 'axios';
-import { config } from '../config/environment.js';
-import logger from '../config/logger.js';
+import axios from "axios";
+import { config } from "../config/environment.js";
+import logger from "../config/logger.js";
 
 export class MerchantService {
   constructor() {
-    this.umemeDetailsEndpoint = config.bank_api.umemeDetailsEndpoint;
-    this.umemeUniversalCompleteTransaction = config.bank_api.umemeUniversalCompleteTransaction;
+    this.merchantDetails = config.bank_api.merchantDetailsEndpoint;
+    this.collectMerchantPayment = config.bank_api.merchantCollectTransaction;
     this.TokenEndpoint = config.bank_api.middleware_authentication;
     this.token = null;
     this.tokenExpiry = null;
@@ -16,21 +16,21 @@ export class MerchantService {
     try {
       const requestData = {
         username: config.bank_api.middleware_username,
-        password: config.bank_api.middleware_password
+        password: config.bank_api.middleware_password,
       };
 
       const response = await axios.post(this.TokenEndpoint, requestData, {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       this.token = response.data.accessToken;
       // this.tokenExpiry = Date.now() + 3 * 60 * 1000; // Token is valid for 3 minutes
       this.tokenExpiry = response.data.expiry;
-      logger.info('Token retrieved successfully');
+      logger.info("Token retrieved successfully");
     } catch (error) {
-      logger.error('Failed to fetch token:', error);
+      logger.error("Failed to fetch token:", error);
       throw new Error(`Unable to fetch token: ${error.message}`);
     }
   }
@@ -42,73 +42,93 @@ export class MerchantService {
     return this.token;
   }
 
-  async validateUmemeMeter(meterNumber, meterType) {
-
+  async validateMerchantCode(merchant_code) {
     try {
       const token = await this.getToken();
       const jsonRequest = {
-        "meterNumber": meterNumber,
-        "meterType": meterType
+        merchantCode: merchant_code,
       };
 
-      const response = await axios.post(this.umemeDetailsEndpoint, jsonRequest, {
+      const response = await axios.post(this.merchantDetails, jsonRequest, {
         headers: {
-          'Content-Type': 'application/json',
-               Authorization: `Bearer ${token}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      const { Status, Code, Message, Type, Balance, Credit, YakaToken, YakaUnits, Reference } = response.data;
+      const {
+        code,
+        status,
+        merchantId,
+        username,
+        float_account
+      } = response.data;
       const statusMap = {
-        '1000': 'Valid Meter Number',
-        '1002': 'Invalid Details',
+        1000: "Valid Merchant Code",
+        1002: "Invalid Details",
       };
 
       return {
-        status: statusMap[Code] || 'Unknown status',
-        status_code: Code,
-        meter_number: meterNumber,
-        meterType: meterType,
-        details: {
-          message: Message,
-          balance: Balance,
-          type: Type,
-        },
+        status: statusMap[code] || "Unknown status",
+        status_code: code,
+        merchant_code: merchant_code,
+        merchant_name: username,
       };
     } catch (error) {
-      logger.error('Umeme validation failed:',error)
-      throw new Error(`Umeme validation failed: ${error}`);
+      return {
+        status: "Failed",
+        status_code: 500,
+        merchant_code: merchant_code,
+        error_message: error.message,
+      }
     }
   }
 
-
-  async InitiateUmemeTransaction(meterNumber, meterType, transactionID, amount, phonenumber) {
+  async InitiateMerchantPayment(
+    merchant_code,
+    transactionID,
+    amount,
+    phonenumber
+  ) {
     try {
-
       const token = await this.getToken();
       const requestData = {
-        "meterNumber": meterNumber,
-        "meterType": meterType,
-        "PhoneNumber": phonenumber,
-        "Amount": amount,
-        "RecordID": transactionID
+        transactionReference: transactionID,
+        customerCode: merchant_code,
+        MSISDN: "sample string 3",
+        amount: amount,
+        remarks: phonenumber,
       };
 
-      const response = await axios.post(this.umemeUniversalCompleteTransaction, requestData, {
-        headers: {
-          'Content-Type': 'application/json',
-               Authorization: `Bearer ${token}`
+      const response = await axios.post(
+        this.collectMerchantPayment,
+        requestData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
-      const { Status, Code, Message, Type, Balance, Credit, YakaToken, YakaUnits, Reference } = response.data;
+      const {
+        Status,
+        Code,
+        Message,
+        Type,
+        Balance,
+        Credit,
+        YakaToken,
+        YakaUnits,
+        Reference,
+      } = response.data;
       const statusMap = {
-        '1000': 'Umeme Transaction Initiated Successfully',
-        '1004': 'Valid Umeme Details',
+        1000: "Merchant Transaction Initiated Successfully",
+        1004: "Valid Merchant Details",
       };
 
       return {
-        status: statusMap[Code] || 'Unknown status',
+        status: statusMap[Code] || "Unknown status",
         status_code: Code,
         status_description: Message,
         meter_number: meterNumber,
@@ -119,13 +139,12 @@ export class MerchantService {
           yaka_token: YakaToken,
           yaka_units: YakaUnits,
           type: Type,
-        }
+        },
       };
     } catch (error) {
-      throw new Error(`Unable to intiate Umeme Transaction Completion: ${error}`)
+      throw new Error(
+        `Unable to intiate Merchant Transaction Completion: ${error}`
+      );
     }
   }
-
-
-
 }

@@ -46,6 +46,10 @@ export const config = {
     NwscDetailsEndpoint: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.NWSC_DETAILS_ENDPOINT),
     NwscUniversalCompleteTransaction: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.NWSC_COMPT_ENDPOINT),
 
+
+    merchantDetailsEndpoint: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.MERCHANT_DETAILS_ENDPOINT),
+    merchantCollectTransaction: buildEndpoint(process.env.GTBANK_MW_BASEURL, process.env.MERCHANT_COMPT_ENDPOINT),
+
   },
   payment: {
     customerCode: process.env.CUSTOMER_CODE,

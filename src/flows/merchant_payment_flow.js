@@ -57,7 +57,7 @@ export const getPayMerchantNextScreen = async (decryptedBody) => {
         if (data.merchant_code != null && data.payment_amount != null && data.payment_phone_number != null) {
           // fetch merchant details
           const validator = new MerchantFlowValidator();
-          const { service_message, status } = await validator.fetchMerchantDetails(data.merchant_code);
+          const { service_message,merchant_name, status } = await validator.fetchMerchantDetails(data.merchant_code, data.payment_phone_number, data.payment_amount);
           return {
             ...SCREEN_RESPONSES.MERCHANT_DETAILS,
             data: {
@@ -66,7 +66,7 @@ export const getPayMerchantNextScreen = async (decryptedBody) => {
               payment_phone_number: data.payment_phone_number,
               valid_details: status == "valid",
               m_error: status != "valid",
-              merchant_payment_details: `${merchant_details} \n\nMerchant code: ${data.merchant_code} \nAmount: ${data.payment_amount}\nPhone no: ${data.payment_phone_number}`
+              merchant_payment_details: `${service_message} \nMerchant code: ${data.merchant_code} \nAmount: ${data.payment_amount}\nPhone no: ${data.payment_phone_number}`
             },
           };
         }

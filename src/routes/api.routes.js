@@ -10,6 +10,7 @@ import { PaymentService } from '../services/payment.service.js';
 import database from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
+import { MerchantService } from '../services/merchant.service.js';
 
 const router = express.Router();
 
@@ -363,6 +364,19 @@ router.get('/testdb', async (req, res) => {
       return res.status(400).json({ err: err });
     }
   })();
+
+});
+
+router.post('/validate_merchant_test', async (req, res) => {
+  const { merchant_code } = req.body;
+  if (!merchant_code) {
+    return res.status(400).json({ error: 'merchant_code is required' });
+  }
+
+  const merchant_service = new MerchantService();
+  const result = await merchant_service.validateMerchantCode(merchant_code);
+
+  return res.status(200).json(result);
 
 });
 

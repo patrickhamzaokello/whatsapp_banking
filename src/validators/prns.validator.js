@@ -11,6 +11,7 @@ export class PRN_Validator {
     let prn_message = "Something went wrong. Try again.";
     let status = "error"; // Default status
     let prn_amount = "na";
+    let prn_tax_payer_name = "na";
 
     if (result.status_code === "N") {
       prn_message = `🛑 Invalid PRN ${prn}. Try again.`;
@@ -28,6 +29,7 @@ export class PRN_Validator {
         `Description: ${result.details.description}\n\n`;
       status = "available";
       prn_amount = result.details.amount;
+      prn_tax_payer_name = result.details.taxpayerName;
     }
 
     // PRN already paid. Enter new PRN
@@ -40,9 +42,10 @@ export class PRN_Validator {
         `Description: ${result.details.description}\n\n`;
       status = "paid";
       prn_amount = result.details.amount;
+      prn_tax_payer_name = result.details.taxpayerName;
     }
 
-    return { prn_message, status, prn_amount };
+    return { prn_message, prn_tax_payer_name, status, prn_amount };
   }
 
   async checkUMEMeMeter(meter_number, meter_type) {

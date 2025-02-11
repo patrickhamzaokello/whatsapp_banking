@@ -1,75 +1,67 @@
-import { PaymentService } from '../services/payment.service.js';
-import { config } from '../config/environment.js';
+import { PaymentService } from "../services/payment.service.js";
+import { config } from "../config/environment.js";
 
 export default class GTPayHandler {
-    static async initiateThroughGTPayment(transactionId, email, serviceType, amount, userName, prn) {
+    static async initiateThroughGTPayment(
+        transactionId,
+        email,
+        serviceType,
+        amount,
+        userName,
+        prn
+      ) {
         // RFC 5322 compliant email regex
-        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-        const isValidEmail = emailRegex.test(email);
-        let response = {
-            paymentLink: null,
-            status: false,
+        const emailRegex =
+          /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      
+        const response = {
+          paymentLink: null,
+          status: false,
+          error: null
         };
-
-        if (isValidEmail) {
-            try {
-
-                // Generate payment details
-                const paymentDetails = await PaymentService.generatePaymentDetails(
-                    serviceType,
-                    amount,
-                    userName,
-                    email,
-                    prn,
-                    transactionId
-                );
-
-                if (prn && serviceType === 'pay_prn') {
-
-                    const paymentLink = await PaymentService.generatePRNPaymentLink(paymentDetails);
-                    response = {
-                        paymentLink,
-                        status: true,
-                    };
-
-                    return response;
-                }
-
-                const paymentLink = await PaymentService.generateUtitilyPaymentLink(paymentDetails);
-                response = {
-                    paymentLink,
-                    status: true,
-                };
-
-                return response;
-
-            } catch (error) {
-                console.error("Error generating payment link:", error);
-                response.paymentLink = null;
-                response.status = false;
-            }
-        } else {
-            console.warn("Invalid email address provided:", email);
+      
+        // Input validation
+        if (!email || !serviceType || !amount || !userName || !transactionId) {
+          response.error = 'Missing required parameters';
+          return response;
         }
-
-    }
-
-
-    static getCurrentDate() {
-        return new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5) + 'Z';
-    }
-
-
-    static formatName(name) {
-        return name.replace(/_/g, ' ').replace(/\s+/g, ' ');
-    }
-
-    static formatTransDetails(service) {
-        return `Payment for ${service.replace(/_/g, ' ')}`.replace(/\s+/g, ' ');
-    }
-
-    static formatPRN(prn) {
-        return prn.replace(/\D/g, '');
-    }
+      
+        // Email validation
+        if (!emailRegex.test(email)) {
+          response.error = 'Invalid email address';
+          console.warn("Invalid email address provided:", email);
+          return response;
+        }
+      
+        try {
+          // Generate payment details
+          const paymentDetails = await PaymentService.generatePaymentDetails(
+            serviceType,
+            amount,
+            userName,
+            email,
+            prn,
+            transactionId
+          );
+      
+          // Generate appropriate payment link based on service type
+          let paymentLink;
+          if (prn && serviceType === "pay_prn") {
+            paymentLink = await PaymentService.generatePRNPaymentLink(paymentDetails);
+          } else {
+            paymentLink = await PaymentService.generateUtitilyPaymentLink(paymentDetails);
+          }
+      
+          return {
+            paymentLink,
+            status: true,
+            error: null
+          };
+      
+        } catch (error) {
+          console.error("Error generating payment link:", error);
+          response.error = error.message || 'Failed to generate payment link';
+          return response;
+        }
+      }
 }

@@ -120,6 +120,7 @@ export class FlowService {
             selected_payment_method,
             phone_number,
             email_address,
+            tax_payer_name,
             flow_token
         } = flowData
 
@@ -155,17 +156,33 @@ export class FlowService {
                     }
 
                 }
-                summary_reply = `*PRN Number:* ${s_prn_number} \n*Amount(UGX):* ${s_amount}`.trim();
+                summary_reply = `*PRN Number:* ${s_prn_number} \n*Tax Payer Name:* ${tax_payer_name} \n*Amount(UGX):* ${s_amount}`.trim();
             }
             if (is_account) {
-                const { paymentLink, status } = await GTPayHandler.initiateThroughGTPayment(TXN_ID, email_address, s_selected_bank_service, s_amount, reply_userName, s_prn_number);
-                if (status) {
-                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`
-                } else {
-                    userdirection_message = `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`
-                }
+                const { paymentLink, status, error } = await GTPayHandler.initiateThroughGTPayment(
+                    TXN_ID,
+                    email_address,
+                    s_selected_bank_service,
+                    s_amount,
+                    reply_userName,
+                    s_prn_number
+                  );
+                console.log("account payment", paymentLink, status, error)
 
-                summary_reply = `*PRN Number:* ${s_prn_number} \n*Amount(UGX):* ${s_amount}`.trim();
+                  
+                  if (status && paymentLink) {
+                    userdirection_message = `👉 Please complete your payment using the following link: ${paymentLink}`;
+                  } else {
+                    // Provide more specific error messages based on the error field
+                    userdirection_message = error
+                      ? `We encountered an issue: ${error}. Please try again or contact support if the issue persists.`
+                      : `We encountered an issue while initiating your payment. Please try again later or contact support if the issue persists.`;
+                  }
+                  
+                  // Add payment attempt information to the summary
+                  summary_reply = `
+                  *PRN Number:* ${s_prn_number} \n*Amount(UGX):* ${s_amount} \n*Tax Payer Name:* ${tax_payer_name} \n*Status:* ${status ? '✅ Payment link generated' : '❌ Payment initiation failed'}
+                  `.trim();
 
             }
 
@@ -464,6 +481,61 @@ export class FlowService {
         }
     }
 
+    static async sendURATAXPaymentFlow(flowId, recipientPhoneNumber, phoneNumberId) {
+        const flowToken = uuidv4();
+
+        const userId = await database.getOrCreateUser(recipientPhoneNumber);
+        const db_result = await database.insertFlowForm(userId, flowToken, "Bills Payment");
+
+        const flowPayload = {
+            type: 'flow',
+            header: { type: 'text', text: 'To Pay URA Tax' },
+            body: {
+                text: 'Use the form below 👇 to initiate payments for URA TAX'
+            },
+            action: {
+                name: 'flow',
+                parameters: {
+                    flow_message_version: '3',
+                    flow_token: flowToken,
+                    flow_id: flowId,
+                    flow_cta: 'PRN Payment form',
+                    flow_action: 'navigate',
+                    flow_action_payload: {
+                        screen: "SELECT_SERVICE",                        
+                    }
+                }
+            }
+        };
+
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: recipientPhoneNumber,
+            type: 'interactive',
+            interactive: flowPayload
+        };
+
+        try {
+            const response = await axios({
+                method: "POST",
+                url: `${config.whatsapp.baseUrl}/${config.whatsapp.apiVersion}/${phoneNumberId}/messages`,
+                headers: {
+                    Authorization: `Bearer ${config.webhook.graphApiToken}`
+                },
+                data: payload
+            });
+
+
+
+            return response.data;
+        }
+        catch (error) {
+            logger.error('Error sending WhatsApp Flow message', { recipientPhoneNumber, flowId, error });
+            throw new WhatsAppError('Failed to send message flow');
+        }
+    }
+
     static async sendBillsPaymentFlow(flowId, recipientPhoneNumber, phoneNumberId) {
 
         const flowToken = uuidv4();
@@ -473,9 +545,9 @@ export class FlowService {
 
         const flowPayload = {
             type: 'flow',
-            header: { type: 'text', text: 'To Pay Tax or Utilities?' },
+            header: { type: 'text', text: 'To Pay Utilities?' },
             body: {
-                text: 'Use the form below 👇 to initiate payment. With this form you can pay for URA, UMEME, NWSC and TV subscriptions.'
+                text: 'Use the form below 👇 to initiate payment. With this form you can pay for  UMEME, NWSC and TV subscriptions.'
             },
             action: {
                 name: 'flow',
@@ -484,7 +556,7 @@ export class FlowService {
                     flow_token: flowToken,
                     flow_id: flowId,
                     // mode: 'draft', //remember to remove when flow is 100% published.
-                    flow_cta: 'Bill payment form',
+                    flow_cta: 'Utilities payment form',
                     flow_action: 'navigate',
                     flow_action_payload: {
                         screen: "SELECT_SERVICE",
@@ -498,10 +570,7 @@ export class FlowService {
                                     id: "pay_service",
                                     title: "Select Service"
                                 },
-                                {
-                                    id: "pay_prn",
-                                    title: "Pay PRN (URA)"
-                                },
+                        
                                 {
                                     id: "pay_nwsc",
                                     title: "Pay Nwsc (Water)"

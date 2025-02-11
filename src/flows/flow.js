@@ -5,7 +5,7 @@ const SCREEN_RESPONSES = {
   SELECT_SERVICE: {
     screen: "SELECT_SERVICE",
     data: {
-      is_prn: false,
+      
       is_nwsc: false,
       is_yaka: false,
       is_tv: false,
@@ -14,10 +14,7 @@ const SCREEN_RESPONSES = {
           id: "pay_service",
           title: "Select Service"
         },
-        {
-          id: "pay_prn",
-          title: "Pay PRN (URA)"
-        },
+    
         {
           id: "pay_nwsc",
           title: "Pay Nwsc (Water)"
@@ -126,7 +123,7 @@ const SCREEN_RESPONSES = {
   SERVICE_DETAILS: {
     screen: "SERVICE_DETAILS",
     data: {
-      is_prn: false,
+      
       is_nwsc: false,
       is_yaka: false,
       is_tv: false,
@@ -136,7 +133,7 @@ const SCREEN_RESPONSES = {
       s_service_status: "status",
       s_selected_service_id: "service_id",
       s_selected_bank_service: "s_selected_bank_service",
-      s_prn_number: "s_prn_number",
+
       s_nwsc_meter_no: "s_nwsc_meter_no",
       s_nwsc_area_selected: "s_nwsc_area_selected",
       s_umeme_meter_type: "s_umeme_meter_type",
@@ -189,7 +186,6 @@ export const getNextScreen = async (decryptedBody) => {
           return {
             ...SCREEN_RESPONSES.SELECT_SERVICE,
             data: {
-              is_prn: data.bank_service_type == "pay_prn",
               is_nwsc: data.bank_service_type == "pay_nwsc",
               is_yaka: data.bank_service_type == "pay_yaka",
               is_tv: data.bank_service_type == "pay_tv",
@@ -226,38 +222,6 @@ export const getNextScreen = async (decryptedBody) => {
         // Handles user clicking on Continue to navigate to next screen
         if (data.s_selected_bank_service != null) {
 
-          // if service is prn
-          if (data.s_selected_bank_service == "pay_prn") {
-
-            //format the prn and remove extra spaces
-            const formattedPRN = data.s_prn_number.replace(/\s/g, '');
-
-            //validate prn number
-            const prnChecker = new PRN_Validator();
-            const { prn_message, status, prn_amount } = await prnChecker.checkPRNStatus(formattedPRN);
-
-            return {
-              ...SCREEN_RESPONSES.SERVICE_DETAILS,
-              data: {
-                is_prn: data.s_selected_bank_service == "pay_prn",
-                is_nwsc: data.s_selected_bank_service == "pay_nwsc",
-                is_yaka: data.s_selected_bank_service == "pay_yaka",
-                is_tv: data.s_selected_bank_service == "pay_tv",
-                s_service_message: prn_message,
-                s_can_proceed: status == "available",
-                s_error: status != "available",
-                is_not_prn: false,
-                prn_amount: prn_amount,
-                s_service_status: status,
-                s_selected_service_id: data.s_selected_bank_service,
-                s_selected_bank_service: SCREEN_RESPONSES.SELECT_SERVICE.data.bank_service_type
-                  .filter((s) => s.id === data.s_selected_bank_service)
-                  .map((s) => s.title)[0],
-                s_prn_number: data.s_prn_number
-              },
-
-            };
-          }
           // if service is nwsc
           if (data.s_selected_bank_service == "pay_nwsc") {
 
@@ -269,7 +233,6 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                is_prn: data.s_selected_bank_service == "pay_prn",
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
@@ -300,7 +263,6 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                is_prn: data.s_selected_bank_service == "pay_prn",
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
@@ -330,7 +292,6 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.SERVICE_DETAILS,
               data: {
-                is_prn: data.s_selected_bank_service == "pay_prn",
                 is_nwsc: data.s_selected_bank_service == "pay_nwsc",
                 is_yaka: data.s_selected_bank_service == "pay_yaka",
                 is_tv: data.s_selected_bank_service == "pay_tv",
@@ -359,35 +320,12 @@ export const getNextScreen = async (decryptedBody) => {
       case "SERVICE_DETAILS":
 
         if (data.s_selected_service_id != null) {
-          if (data.s_selected_service_id == "pay_prn") {
-
-            return {
-              ...SCREEN_RESPONSES.PAYMENT_METHOD,
-              data: {
-                is_prn: data.is_prn,
-                is_nwsc: data.is_nwsc,
-                is_yaka: data.is_yaka,
-                is_tv: data.is_tv,
-                s_can_proceed: data.s_can_proceed,
-                s_service_status: data.s_service_status,
-                s_selected_service_id: data.s_selected_service_id,
-                s_prn_number: data.s_prn_number,
-                s_amount: data.prn_amount,
-                is_mobile: false,
-                is_account: false,
-                s_selected_bank_service: data.s_selected_service_id,
-                s_service_message: data.s_service_message,
-                selected_payment_method: "select payment method"
-              },
-
-            };
-          }
+          
           // if service is nwsc
           if (data.s_selected_service_id == "pay_nwsc") {
             return {
               ...SCREEN_RESPONSES.PAYMENT_METHOD,
               data: {
-                is_prn: data.is_prn,
                 is_nwsc: data.is_nwsc,
                 is_yaka: data.is_yaka,
                 is_tv: data.is_tv,
@@ -411,7 +349,6 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.PAYMENT_METHOD,
               data: {
-                is_prn: data.is_prn,
                 is_nwsc: data.is_nwsc,
                 is_yaka: data.is_yaka,
                 is_tv: data.is_tv,
@@ -435,7 +372,6 @@ export const getNextScreen = async (decryptedBody) => {
             return {
               ...SCREEN_RESPONSES.PAYMENT_METHOD,
               data: {
-                is_prn: data.is_prn,
                 is_nwsc: data.is_nwsc,
                 is_yaka: data.is_yaka,
                 is_tv: data.is_tv,

@@ -306,7 +306,7 @@ export class PaymentService {
       const secure_hash = this.hashAllFields(hash_input_data, gtp_SecureHashType, secureSecret);
 
       const url =
-        `${config.payment.prnBaseUrl}?` +
+        `${config.payment.utilityBaseUrl}?` +
         `${hash_input_data}&` +
         `gtp_TransDate=${transDate}&` +
         `gtp_SecureHash=${secure_hash}&` +

@@ -92,12 +92,22 @@ router.post('/gtpay_payment', async (req, res) => {
 
 // receive payment status
 router.post('/xpayment-status', async (req, res) => {
-  const { message, transaction_id, secure_hash } = req.body;
+  const { message, transaction_id, secure_hash, message_desc } = req.body;
+  console.log(req.body);
+  logger.info('XPayment Status Update', req.body);
   try {
+
+    if(message == '0'){
+      return res.status(200).json({
+        success: 'Request Unsuccessful',
+        data: message_desc
+      });
+
+    }
+
     if (message == '1' & transaction_id != null) {
       const status = 'Successful'; // Replace with the desired status (e.g., 'Pending', 'Successful', 'Failed')
       try {
-
         const result = await database.updateTransactionStatus(transaction_id, status);
         console.log(result.message);
         // Fetch receipt data with error handling

@@ -124,7 +124,7 @@ export class PrnService {
 
   formatPrnDetailsResponse(prnResult) {
 
-    const { URAStatusCode, StatusDesc, Amount, currencyCode, PaymentExpiryDate, TaxPayerName, Prn } = prnResult;
+    const { URAStatusCode, StatusDesc, Amount, CurrencyCode, PaymentExpiryDate, TaxPayerName, Prn } = prnResult;
     const statusMap = {
       N: 'Invalid PRN',
       A: 'Available for payment',
@@ -138,7 +138,7 @@ export class PrnService {
       details: {
         description: StatusDesc,
         amount: Amount,
-        currency: currencyCode,
+        currency: CurrencyCode,
         expiryDate: PaymentExpiryDate,
         taxpayerName: TaxPayerName,
       },

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Status</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <% if (success) { %>
+        <!-- Success State -->
+        <div class="bg-white rounded-lg shadow-lg p-6 text-center mb-4">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Payment Successful!</h2>
+            <p class="text-gray-600 mb-4">
+                Your payment of <%= transactionDetails.amount %> for <%= transactionDetails.serviceType %> has been completed successfully.
+            </p>
+            <div class="bg-green-50 rounded-lg p-4 mb-4">
+                <p class="text-green-800">
+                    We've sent your receipt to your WhatsApp contact.
+                    <span class="block mt-2 text-sm">Check your WhatsApp messages for details.</span>
+                </p>
+            </div>
+            <a href="/" class="inline-block bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                Return Home
+            </a>
+        </div>
+        <% } else { %>
+        <!-- Error State -->
+        <div class="bg-white rounded-lg shadow-lg p-6 text-center mb-4">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Transaction Failed</h2>
+            <p class="text-gray-600 mb-4">We couldn't process your payment at this time.</p>
+            <div class="bg-red-50 rounded-lg p-4 mb-4">
+                <p class="text-red-800">
+                    Error: <span class="font-medium"><%= error %></span>
+                    <% if (details) { %>
+                        <span class="block mt-2 text-sm"><%= details %></span>
+                    <% } %>
+                </p>
+            </div>
+            <div class="space-x-4">
+                <a href="/" class="inline-block bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                    Return Home
+                </a>
+                <button onclick="window.location.reload()" class="inline-block bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                    Try Again
+                </button>
+            </div>
+        </div>
+        <% } %>
+    </div>
+</body>
+</html>

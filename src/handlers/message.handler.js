@@ -8,7 +8,6 @@ import database from "../config/database.js";
 import path from "path";
 import { MapGenerator } from "../services/map.service.js";
 import fs from "fs";
-import io from "socket.io-client";
 
 export class MessageHandler {
   // Allowed contacts list moved to a class-level constant
@@ -188,7 +187,6 @@ export class MessageHandler {
         userPhone,
         error: error.message,
       });
-      throw error; // Re-throw to let caller handle the error
     }
   }
 

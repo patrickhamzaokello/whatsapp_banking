@@ -11,6 +11,7 @@ import database from '../config/database.js';
 import fs from 'fs';
 import path from 'path';
 import { MerchantService } from '../services/merchant.service.js';
+import { FlowEndpointException } from '../flows/encryption.js';
 
 const router = express.Router();
 
@@ -91,128 +92,94 @@ router.post('/gtpay_payment', async (req, res) => {
 
 })
 
+// mobilemoney receive payment status
+router.post('/mobilemoney-status', async (req, res) => {
+  const { message, transaction_id, secure_hash, message_desc } = req.body;
+  logger.info('Mobile Money Status Update', req.body);
+  res.status(200).json({
+    success: 'Message status updated'});
+});
+
 // receive payment status
 router.post('/xpayment-status', async (req, res) => {
   const { message, transaction_id, secure_hash, message_desc } = req.body;
-  console.log(req.body);
   logger.info('XPayment Status Update', req.body);
+  
   try {
-
-    if(message == '0'){
-      return res.status(200).json({
-        success: 'Request Unsuccessful',
-        data: message_desc
+    if (message == '0') {
+      return res.render('transaction-status', {
+        success: false,
+        error: 'Request Unsuccessful',
+        details: message_desc
       });
-
     }
 
-    if (message == '1' & transaction_id != null) {
-      const status = 'Successful'; // Replace with the desired status (e.g., 'Pending', 'Successful', 'Failed')
+    if (message == '1' && transaction_id != null) {
+      const status = 'Successful';
       try {
         const result = await database.updateTransactionStatus(transaction_id, status);
-        console.log(result.message);
-        // Fetch receipt data with error handling
         const receiptData = await database.generateReceiptMessage(transaction_id);
 
-        if (result.success && receiptData.transactionDetails) {
-          console.log(receiptData);
-          // Early validation of transaction status
-          if (receiptData.transactionDetails.status !== 'Successful') {
-            return res.status(400).json({
-              error: 'Invalid transaction status',
-              details: 'Receipt is only available for completed transactions'
-            });
+        if (!result.success || !receiptData.transactionDetails) {
+          throw new FlowEndpointException('Transaction Processing Error', 'Unable to process transaction details');
+        }
+
+        if (receiptData.transactionDetails.status !== 'Successful') {
+          throw new FlowEndpointException('Invalid Transaction Status', 'Receipt is only available for completed transactions');
+        }
+
+        // Generate and send PDF receipt via WhatsApp
+        try {
+          
+          const logoPath = path.join('/app', 'src', 'public', 'images', 'gtbank_logo.png');
+          const receiptPdf = await PaymentService.generateReceiptPDF(receiptData, { logoPath });
+          
+          if (!receiptPdf || !receiptPdf.file || !fs.existsSync(receiptPdf.filePath)) {
+            throw new FlowEndpointException('PDF Generation Failed', 'Unable to generate receipt');
           }
 
-          // Generate PDF with robust error handling
-          let receiptPdf;
-          try {
-            const logoPath = path.join('/app', 'src', 'public', 'images', 'gtbank_logo.png');
-            receiptPdf = await PaymentService.generateReceiptPDF(receiptData, {
-              logoPath: logoPath
-            });
-          } catch (pdfError) {
-            // Log the specific PDF generation error
-            console.error('Receipt PDF generation failed:', pdfError);
-            return res.status(500).json({
-              error: 'PDF generation failed',
-              details: 'Unable to create transaction receipt'
-            });
+          const uploadResult = await WhatsAppService.uploadWhatsappMedia(receiptPdf.filePath);
+          if (!uploadResult?.id) {
+            throw new FlowEndpointException('WhatsApp Upload Failed', 'Unable to upload receipt');
           }
 
-          // Validate PDF file generation
-          if (!receiptPdf || !receiptPdf.file) {
-            return res.status(500).json({
-              error: 'PDF creation error',
-              details: 'No receipt file was generated'
-            });
-          }
+          await WhatsAppService.sendTransactionReceipt(
+            uploadResult.id,
+            receiptData.receiptent_contact,
+            `Dear ${receiptData.customerDetails.name},\n\nYour payment of ${receiptData.transactionDetails.amount} for ${receiptData.transactionDetails.serviceType} was successful✅ .\n\nThank you for using our services.`,
+            'Receipt'
+          );
 
-          if (!fs.existsSync(receiptPdf.filePath)) {
-            return res.status(500).json({
-              error: 'File not found',
-              details: receiptPdf
-            });
-          }
-          logger.info(`Uploading file: ${receiptPdf.filePath}`);
-
-          // Upload to WhatsApp with comprehensive error handling
-          let mediaId;
-          try {
-            const uploadResult = await WhatsAppService.uploadWhatsappMedia(receiptPdf.filePath);
-            mediaId = uploadResult?.id;
-          } catch (uploadError) {
-            console.error('WhatsApp media upload failed:', uploadError);
-            return res.status(500).json({
-              error: 'Media upload failed',
-              details: 'Unable to upload receipt to WhatsApp'
-            });
-          }
-
-          // Validate media upload
-          if (!mediaId) {
-            return res.status(500).json({
-              error: 'Upload unsuccessful',
-              details: 'No media ID received from WhatsApp'
-            });
-          }
-
-          // Send receipt to user
-          try {
-            await WhatsAppService.sendTransactionReceipt(
-              mediaId,
-              receiptData.receiptent_contact,
-              `Dear ${receiptData.customerDetails.name},\n\nYour payment of ${receiptData.transactionDetails.amount} for ${receiptData.transactionDetails.serviceType} was successful✅ .\n\nThank you for using our services.`,
-              'Receipt',
-            );
-          } catch (sendError) {
-            console.error('Receipt send failed:', sendError);
-            // Non-critical error - we've uploaded the media, just log the send failure
-            console.warn(`Failed to send receipt for transaction ${transaction_id}`);
-          }
-
-          // Respond with media ID
-          res.status(200).json({
-            message: 'The Payment was completed Successfullly, We have sent you a receipt on Whatsapp.',
-            mediaId: mediaId
+          return res.render('transaction-status', {
+            success: true,
+            transactionDetails: {
+              amount: receiptData.transactionDetails.amount,
+              serviceType: receiptData.transactionDetails.serviceType
+            }
           });
-        } else {
-          res.status(404).json(receiptData);
+
+        } catch (processError) {
+          logger.error('Receipt processing error:', processError);
+          throw new FlowEndpointException('Receipt Processing Error', processError.message);
         }
 
       } catch (error) {
-        // Catch-all error handler with logging
-        console.error(`Receipt generation error for transaction ${transaction_id}:`, error);
-
-        res.status(500).json({
-          error: 'Internal server error',
-          details: 'Unable to process receipt request'
+        logger.error(`Transaction processing error for ID ${transaction_id}:`, error);
+        return res.render('transaction-status', {
+          success: false,
+          error: error.message || 'Transaction Processing Error',
+          details: error.details || 'An error occurred while processing the transaction'
         });
       }
     }
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    logger.error('General error:', error);
+    return res.render('transaction-status', {
+      success: false,
+      error: error.message || 'System Error',
+      details: error.details || 'An unexpected error occurred'
+    });
   }
 });
 

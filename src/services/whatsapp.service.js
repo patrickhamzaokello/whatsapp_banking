@@ -209,7 +209,6 @@ export class WhatsAppService {
         error,
         roomId: broadcast_data?.roomId
       });
-      throw new Error('Failed to send broadcast message: ' + error);
     }
   }
 

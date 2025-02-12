@@ -70,6 +70,11 @@ const staticFolderPath = path.join(__dirname, "public");
 // Serve static files from the 'public' folder
 app.use(express.static(staticFolderPath));
 
+// Add this near your other path configurations
+const viewsPath = path.join(__dirname, 'web_views');
+app.set('view engine', 'ejs');
+app.set('views', viewsPath);
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK", timestamp: new Date() });
@@ -493,7 +498,7 @@ app.use("/api/whatsapp", router);
 app.use("/maps", express.static(path.join(__dirname, "generated-maps")));
 
 app.get("/", (req, res) => {
-  res.send("<b>Welcome</b>").status(200);
+  res.render('landing');
 });
 
 app.get("/:shortCode", (req, res) => {
@@ -509,10 +514,7 @@ app.get("/:shortCode", (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    status: "error",
-    message: "Route not found",
-  });
+  res.status(404).render('404');
 });
 
 // Global error handler

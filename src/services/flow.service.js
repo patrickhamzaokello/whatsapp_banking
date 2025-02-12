@@ -137,6 +137,8 @@ export class FlowService {
         //initiate payment for service
         if (is_prn) {
 
+            logger.info(`Processing PRN Payment for ${reply_userName} with PRN ${s_prn_number} and amount ${s_amount} and TXN_ID ${TXN_ID}`);
+
             //post the prn transaction for either mobile or account
             if (is_mobile) {
                 const prn_service = new PrnService();

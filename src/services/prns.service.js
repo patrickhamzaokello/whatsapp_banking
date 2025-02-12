@@ -55,9 +55,10 @@ export class PrnService {
 
   async universialPRNCompleteTransaction(TXN_ID, prn, phonenumber) {
     try {
-      const response = await this.getUniversalUraCompleteTransaction(TXN_ID, prn, phonenumber);
+      const response = await this.getUniversalUraCompleteTransaction(TXN_ID, prn, phonenumber);      
       return this.formatUniversalCompleteTransactionResponse(response);
     } catch (error) {
+      logger.error('PRN Transaction Completion failed:', error);
       throw new Error(`Unable to intiate PRN Transaction Completion: ${error}`)
     }
   }

@@ -140,7 +140,7 @@ export class FlowService {
             //post the prn transaction for either mobile or account
             if (is_mobile) {
                 const prn_service = new PrnService();
-                const result = await prn_service.universialPRNCompleteTransaction(s_prn_number, phone_number);
+                const result = await prn_service.universialPRNCompleteTransaction(TXN_ID, s_prn_number, phone_number);
                 // if invalid prn
                 if (result.status_code === "1013") {
                     userdirection_message = `🛑 Payment initiation failed. Reason: ${result.status_description.toLowerCase()}`;

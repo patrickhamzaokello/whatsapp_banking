@@ -1,72 +1,407 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GTBank Social Banking</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-</head>
-<body class="bg-gradient-to-br from-orange-50 to-yellow-50 min-h-screen">
-    <div class="container mx-auto px-4 py-12">
-        <!-- Header Section -->
-        <header class="text-center mb-16">
-            <div class="mb-8">
-                <img src="/images/gtbank_logo.png" alt="GTBank Logo" class="h-16 mx-auto mb-6">
-                <h1 class="text-6xl font-black text-orange-600 mb-4 animate__animated animate__fadeIn">
-                    GT Social Banking
-                </h1>
-                <p class="text-2xl font-bold text-gray-600">Secure • Fast • Reliable</p>
-            </div>
-        </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BankSocial - Modern Banking</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
 
-        <!-- Main Content -->
-        <main class="max-w-4xl mx-auto">
-            <!-- Services Grid -->
-            <div class="grid md:grid-cols-2 gap-8 mb-16">
-                <!-- Card 1 -->
-                <div class="bg-white rounded-2xl shadow-lg p-8 transform hover:scale-105 transition-transform">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Merchant Payments</h2>
-                    <p class="text-gray-600 mb-6 font-medium">Process secure payments for your business with our advanced merchant solutions.</p>
-                    <div class="text-orange-500 font-bold">&rarr;</div>
-                </div>
+      :root {
+        --primary: #f56400;
+        --primary-dark: #d55800;
+        --primary-light: #ff7a1f;
+        --white: #ffffff;
+        --gray-100: #f3f4f6;
+        --gray-600: #4b5563;
+        --gray-900: #111827;
+      }
 
-                <!-- Card 2 -->
-                <div class="bg-white rounded-2xl shadow-lg p-8 transform hover:scale-105 transition-transform">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Bill Payments</h2>
-                    <p class="text-gray-600 mb-6 font-medium">Pay your bills quickly and securely through our platform.</p>
-                    <div class="text-orange-500 font-bold">&rarr;</div>
-                </div>
-            </div>
+      nav {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid #e5e7eb;
+        z-index: 50;
+      }
 
-            <!-- Features Section -->
-            <div class="bg-white rounded-2xl shadow-lg p-8 mb-16">
-                <h2 class="text-4xl font-bold text-center text-gray-800 mb-8">WHY CHOOSE US</h2>
-                <div class="grid md:grid-cols-3 gap-8">
-                    <div class="text-center">
-                        <div class="text-5xl font-bold text-orange-500 mb-4">24/7</div>
-                        <p class="font-bold text-gray-700">Always Available</p>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-5xl font-bold text-orange-500 mb-4">100%</div>
-                        <p class="font-bold text-gray-700">Secure Transactions</p>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-5xl font-bold text-orange-500 mb-4">0.01s</div>
-                        <p class="font-bold text-gray-700">Processing Time</p>
-                    </div>
-                </div>
-            </div>
+      .nav-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-            <!-- Contact Section -->
-            <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4">Need Help?</h2>
-                <p class="text-xl font-medium text-gray-600 mb-6">Our support team is here to assist you</p>
-                <a href="/support" class="inline-block bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors font-bold text-lg">
-                    Contact Support
-                </a>
-            </div>
-        </main>
-    </div>
-</body>
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: bold;
+        font-size: 1.25rem;
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--gray-600);
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--gray-900);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--white);
+        border: none;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-dark);
+      }
+
+      .btn-white {
+        background: var(--white);
+        color: var(--primary);
+      }
+
+      .btn-white:hover {
+        background: var(--gray-100);
+      }
+
+      .hero {
+        padding: 8rem 1rem 4rem;
+        text-align: center;
+        background: var(--white);
+      }
+
+      .hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.2;
+        color: var(--gray-900);
+        margin-bottom: 1.5rem;
+      }
+
+      .hero h1 span {
+        color: var(--primary);
+        display: block;
+      }
+
+      .hero p {
+        max-width: 48rem;
+        margin: 0 auto 2rem;
+        font-size: 1.25rem;
+        color: var(--gray-600);
+      }
+
+      .features {
+        background: var(--gray-100);
+        padding: 4rem 1rem;
+      }
+
+      .features-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+      }
+
+      .feature-card {
+        background: var(--white);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .feature-icon {
+        width: 3rem;
+        height: 3rem;
+        background: #fff1e7;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+      }
+
+      .feature-icon svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--primary);
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+        color: var(--gray-900);
+      }
+
+      .feature-card p {
+        color: var(--gray-600);
+      }
+
+      .cta {
+        background: var(--primary);
+        color: var(--white);
+        padding: 4rem 1rem;
+      }
+
+      .cta-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+      }
+
+      .cta h2 {
+        font-size: 2.25rem;
+        font-weight: 800;
+      }
+
+      .cta h2 span {
+        display: block;
+        opacity: 0.9;
+        font-size: 1.875rem;
+      }
+
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+
+        .hero h1 {
+          font-size: 2.5rem;
+        }
+
+        .cta-content {
+          text-align: center;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-content">
+        <a href="#" class="logo">
+          <svg
+            width="63"
+            height="55"
+            viewBox="0 0 563 555"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect width="563" height="555" fill="url(#pattern0_1311_1327)" />
+            <defs>
+              <pattern
+                id="pattern0_1311_1327"
+                patternContentUnits="objectBoundingBox"
+                width="1"
+                height="1"
+              >
+                <use
+                  xlink:href="#image0_1311_1327"
+                  transform="matrix(0.0070922 0 0 0.00719424 -0.957447 -0.057554)"
+                />
+              </pattern>
+              <image
+                id="image0_1311_1327"
+                width="282"
+                height="179"
+                xlink:href="data:image/png;base64,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"
+              />
+            </defs>
+          </svg>
+          GTBank Uganda
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+          <a
+            href="https://wa.me/message/LL2ICHSYUHHTI1"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary"
+          >
+            Chat with Us
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <h1>
+        Banking Reimagined for
+        <span>The Social Era</span>
+      </h1>
+      <p>
+        Experience the future of banking where financial services meet social
+        connectivity. Simple, secure, and always connected to what matters most
+        - you.
+      </p>
+      <a
+        href="https://wa.me/message/LL2ICHSYUHHTI1"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn btn-primary"
+      >
+        Get Started
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </a>
+    </section>
+
+    <section class="features">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m22 2-7 20-4-9-9-4Z" />
+              <path d="M22 2 11 13" />
+            </svg>
+          </div>
+          <h3>Instant Transfers</h3>
+          <p>Send money to friends and family instantly, with zero fees.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+            </svg>
+          </div>
+          <h3>Secure Banking</h3>
+          <p>Bank with confidence knowing your money is protected.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+              />
+            </svg>
+          </div>
+          <h3>24/7 Support</h3>
+          <p>Get help anytime via WhatsApp or our support channels.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="cta-content">
+        <h2>
+          Ready to get started?
+          <span>Join thousands of happy customers today.</span>
+        </h2>
+        <a
+          href="https://wa.me/message/LL2ICHSYUHHTI1"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-white"
+        >
+          Chat with Us
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+            />
+          </svg>
+        </a>
+      </div>
+    </section>
+  </body>
 </html>
